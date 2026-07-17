@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spatio Equipment Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.0/firebase-database-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#12181a;
+    --panel:#1b2427;
+    --panel-2:#222d31;
+    --line:#33403f;
+    --text:#eef2ef;
+    --muted:#9fb0ac;
+    --accent:#ffb400;
+    --accent-dim:#7a5c00;
+    --good:#5fbf77;
+    --bad:#e2584d;
+    --warn:#e2a53d;
+    --radius:10px;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    min-height:100vh; padding-bottom:40px;
+  }
+  header{
+    padding:18px 16px 14px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    position:sticky; top:0; background:var(--bg); z-index:20;
+  }
+  header h1{font-size:17px; margin:0; letter-spacing:.3px;}
+  header .status{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px;}
+  .dot{width:8px;height:8px;border-radius:50%; background:var(--bad);}
+  .dot.on{background:var(--good);}
+  nav{
+    display:flex; gap:6px; padding:10px 12px; overflow-x:auto;
+    border-bottom:1px solid var(--line); position:sticky; top:53px; background:var(--bg); z-index:19;
+  }
+  nav button{
+    flex:0 0 auto; padding:9px 14px; border-radius:999px; border:1px solid var(--line);
+    background:var(--panel); color:var(--muted); font-size:13px; font-weight:600; cursor:pointer;
+  }
+  nav button.active{ background:var(--accent); color:#231a00; border-color:var(--accent);}
+  main{padding:16px; max-width:720px; margin:0 auto;}
+  section{display:none;}
+  section.active{display:block;}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px; margin-bottom:14px;
+  }
+  .card h2{font-size:14px; margin:0 0 12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px;}
+  label{display:block; font-size:12px; color:var(--muted); margin:10px 0 4px;}
+  select, input, textarea{
+    width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--text); font-size:15px;
+  }
+  input:focus, select:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .row{display:flex; gap:10px;}
+  .row > *{flex:1;}
+  button.primary{
+    margin-top:16px; width:100%; padding:14px; border:none; border-radius:8px;
+    background:var(--accent); color:#231a00; font-weight:700; font-size:15px; cursor:pointer;
+  }
+  button.primary:disabled{background:var(--accent-dim); color:#7d7160; cursor:not-allowed;}
+  button.secondary{
+    margin-top:10px; width:100%; padding:12px; border-radius:8px; cursor:pointer;
+    background:transparent; border:1px solid var(--line); color:var(--text); font-size:14px;
+  }
+  .msg{margin-top:10px; font-size:13px; padding:10px 12px; border-radius:8px; display:none;}
+  .msg.show{display:block;}
+  .msg.ok{background:#123320; color:var(--good); border:1px solid #1e5c34;}
+  .msg.err{background:#3a1614; color:#ff8f85; border:1px solid #6b2019;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th, td{padding:8px 6px; text-align:left; border-bottom:1px solid var(--line);}
+  th{color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase;}
+  .badge{padding:3px 8px; border-radius:999px; font-size:11px; font-weight:700;}
+  .badge.office{background:#123320; color:var(--good);}
+  .badge.out{background:#3a2e12; color:var(--warn);}
+  .badge.repair{background:#3a1614; color:var(--bad);}
+  .item-list{display:flex; flex-direction:column; gap:8px;}
+  .item-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 12px; background:var(--panel-2); border-radius:8px; border:1px solid var(--line);
+    cursor:pointer;
+  }
+  .item-row.selected{border-color:var(--accent);}
+  .item-row .id{font-weight:700; font-size:14px;}
+  .item-row .meta{font-size:11px; color:var(--muted);}
+  #qr-reader{border-radius:8px; overflow:hidden; margin-top:10px;}
+  #qr-print{display:flex; flex-wrap:wrap; gap:12px; margin-top:14px;}
+  .qr-tile{
+    background:#fff; color:#000; border-radius:8px; padding:10px; text-align:center;
+    width:130px; font-size:12px; font-weight:700;
+  }
+  .qr-tile div.qrbox{margin:0 auto 6px;}
+  .empty{color:var(--muted); font-size:13px; text-align:center; padding:20px 0;}
+  .searchbar{margin-bottom:10px;}
+  .history-item{padding:10px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .history-item .top{display:flex; justify-content:space-between; font-weight:600;}
+  .history-item .sub{color:var(--muted); font-size:12px; margin-top:2px;}
+  @media print{
+    body *{display:none !important;}
+    body{background:#fff; color:#000;}
+    #qr-print, #qr-print *{display:flex !important;}
+    #qr-print{flex-wrap:wrap; gap:12px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Equipment Tracker — Lahore</h1>
+  <div class="status"><span class="dot" id="connDot"></span><span id="connText">connecting…</span></div>
+</header>
+
+<nav>
+  <button data-tab="checkout" class="active">Check Out</button>
+  <button data-tab="checkin">Check In</button>
+  <button data-tab="items">Items</button>
+  <button data-tab="history">History</button>
+</nav>
+
+<main>
+
+  <!-- CHECK OUT -->
+  <section id="tab-checkout" class="active">
+    <div class="card">
+      <h2>Scan or select item</h2>
+      <button class="secondary" id="startScanOut">📷 Scan QR code</button>
+      <div id="qr-reader-out"></div>
+      <label>Item</label>
+      <select id="outItemSelect"><option value="">— select item —</option></select>
+
+      <label>Surveyor name</label>
+      <input id="outSurveyor" placeholder="e.g. Ahmed Raza">
+
+      <label>Notes (optional)</label>
+      <input id="outNotes" placeholder="e.g. taking spare battery too">
+
+      <button class="primary" id="btnCheckout">Check Out</button>
+      <div class="msg" id="outMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Currently out</h2>
+      <div id="outList" class="item-list"><div class="empty">Loading…</div></div>
+    </div>
+  </section>
+
+  <!-- CHECK IN -->
+  <section id="tab-checkin">
+    <div class="card">
+      <h2>Scan or select item to return</h2>
+      <button class="secondary" id="startScanIn">📷 Scan QR code</button>
+      <div id="qr-reader-in"></div>
+      <label>Item currently out</label>
+      <select id="inItemSelect"><option value="">— select item —</option></select>
+
+      <label>Condition on return</label>
+      <select id="inCondition">
+        <option value="OK">OK — working fine</option>
+        <option value="Damaged">Damaged</option>
+        <option value="Missing part">Missing part / accessory</option>
+      </select>
+
+      <label>Notes (optional)</label>
+      <input id="inNotes" placeholder="describe damage or missing part">
+
+      <button class="primary" id="btnCheckin">Check In</button>
+      <div class="msg" id="inMsg"></div>
+    </div>
+  </section>
+
+  <!-- ITEMS -->
+  <section id="tab-items">
+    <div class="card">
+      <h2>Add new item</h2>
+      <div class="row">
+        <div>
+          <label>District code</label>
+          <input id="newDistrict" value="LHR" maxlength="4" style="text-transform:uppercase">
+        </div>
+        <div>
+          <label>Type</label>
+          <select id="newType">
+            <option>DGPS</option>
+            <option>ROD</option>
+            <option>BAG</option>
+            <option>CHARGER</option>
+            <option>BATTERY</option>
+            <option>OTHER</option>
+          </select>
+        </div>
+      </div>
+      <label>Number (auto if blank)</label>
+      <input id="newNumber" placeholder="e.g. 01">
+      <label>Serial number (optional)</label>
+      <input id="newSerial" placeholder="manufacturer serial no.">
+      <button class="primary" id="btnAddItem">Add Item + Generate QR</button>
+      <div class="msg" id="addMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>All items</h2>
+      <input class="searchbar" id="itemSearch" placeholder="search by ID or type…">
+      <div id="itemMaster" class="item-list"><div class="empty">Loading…</div></div>
+      <button class="secondary" id="btnExportExcel">⬇️ Export item list to Excel</button>
+    </div>
+
+    <div class="card">
+      <h2>Print QR labels</h2>
+      <label>Select items to print</label>
+      <select id="qrPrintSelect" multiple size="6" style="height:auto;"></select>
+      <button class="secondary" id="btnBuildPrint">Build label sheet</button>
+      <div id="qr-print"></div>
+      <button class="secondary" id="btnPrintQr" style="display:none;">🖨️ Print QR labels</button>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="tab-history">
+    <div class="card">
+      <h2>Filter</h2>
+      <div class="row">
+        <div>
+          <label>Item</label>
+          <select id="histItem"><option value="">All items</option></select>
+        </div>
+        <div>
+          <label>Surveyor</label>
+          <input id="histSurveyor" placeholder="name contains…">
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Transaction log (most recent first)</h2>
+      <div id="histList"><div class="empty">Loading…</div></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCaISf9wxBUGKn1RJ5-CWQkDNYfZdqHdqY",
+  authDomain: "spatio-equipment-tracker.firebaseapp.com",
+  databaseURL: "https://spatio-equipment-tracker-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "spatio-equipment-tracker",
+  storageBucket: "spatio-equipment-tracker.firebasestorage.app",
+  messagingSenderId: "1000623574315",
+  appId: "1:1000623574315:web:1288010b82764f931fc96e"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// connection status
+db.ref(".info/connected").on("value", snap => {
+  const dot = document.getElementById("connDot");
+  const txt = document.getElementById("connText");
+  if (snap.val() === true){ dot.classList.add("on"); txt.textContent = "online — synced"; }
+  else { dot.classList.remove("on"); txt.textContent = "offline — will sync"; }
+});
+
+// ---------- tab switching ----------
+document.querySelectorAll("nav button").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll("main section").forEach(s=>s.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-"+btn.dataset.tab).classList.add("active");
+  });
+});
+
+function showMsg(id, text, ok){
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = "msg show " + (ok ? "ok" : "err");
+  setTimeout(()=>{ el.classList.remove("show"); }, 4000);
+}
+
+// ---------- ITEMS ----------
+let itemsCache = {};
+
+db.ref("items").on("value", snap=>{
+  itemsCache = snap.val() || {};
+  renderItemMaster();
+  renderOutSelect();
+  renderInSelect();
+  renderOutList();
+  renderHistItemFilter();
+  renderQrPrintSelect();
+});
+
+function renderItemMaster(){
+  const search = (document.getElementById("itemSearch").value || "").toUpperCase();
+  const wrap = document.getElementById("itemMaster");
+  const ids = Object.keys(itemsCache).sort();
+  const filtered = ids.filter(id => id.includes(search) || (itemsCache[id].type||"").toUpperCase().includes(search));
+  if (filtered.length === 0){
+    wrap.innerHTML = '<div class="empty">No items yet. Add one above.</div>';
+    return;
+  }
+  wrap.innerHTML = "";
+  filtered.forEach(id=>{
+    const it = itemsCache[id];
+    const row = document.createElement("div");
+    row.className = "item-row";
+    const badgeClass = it.status === "With surveyor" ? "out" : (it.status === "Under repair" ? "repair" : "office");
+    row.innerHTML = `<div><div class="id">${id}</div><div class="meta">${it.type} · ${it.district}${it.serial ? " · SN:"+it.serial : ""}</div></div>
+      <span class="badge ${badgeClass}">${it.status || "In office"}</span>`;
+    wrap.appendChild(row);
+  });
+}
+document.getElementById("itemSearch").addEventListener("input", renderItemMaster);
+
+document.getElementById("btnAddItem").addEventListener("click", ()=>{
+  const district = (document.getElementById("newDistrict").value || "LHR").toUpperCase().trim();
+  const type = document.getElementById("newType").value;
+  let number = document.getElementById("newNumber").value.trim();
+  const serial = document.getElementById("newSerial").value.trim();
+
+  if (!number){
+    // auto-generate next number for this district+type
+    const existing = Object.keys(itemsCache).filter(id => id.startsWith(district+"-"+type+"-"));
+    const nums = existing.map(id => parseInt(id.split("-").pop(),10)).filter(n=>!isNaN(n));
+    const next = (nums.length ? Math.max(...nums) : 0) + 1;
+    number = String(next).padStart(2,"0");
+  } else {
+    number = number.padStart(2,"0");
+  }
+  const itemId = `${district}-${type}-${number}`;
+
+  if (itemsCache[itemId]){
+    showMsg("addMsg", `${itemId} already exists. Choose a different number.`, false);
+    return;
+  }
+
+  db.ref("items/"+itemId).set({
+    district, type, serial: serial || null,
+    status: "In office",
+    addedDate: new Date().toISOString()
+  }).then(()=>{
+    showMsg("addMsg", `Added ${itemId}. Use "Print QR labels" below to print it.`, true);
+    document.getElementById("newNumber").value = "";
+    document.getElementById("newSerial").value = "";
+  }).catch(e=>showMsg("addMsg","Error: "+e.message, false));
+});
+
+function renderQrPrintSelect(){
+  const sel = document.getElementById("qrPrintSelect");
+  const previouslySelected = new Set([...sel.selectedOptions].map(o=>o.value));
+  sel.innerHTML = "";
+  Object.keys(itemsCache).sort().forEach(id=>{
+    const opt = document.createElement("option");
+    opt.value = id; opt.textContent = id;
+    if (previouslySelected.has(id)) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById("btnBuildPrint").addEventListener("click", ()=>{
+  const selected = [...document.getElementById("qrPrintSelect").selectedOptions].map(o=>o.value);
+  const wrap = document.getElementById("qr-print");
+  wrap.innerHTML = "";
+  const printBtn = document.getElementById("btnPrintQr");
+  if (selected.length === 0){ printBtn.style.display = "none"; return; }
+  selected.forEach(itemId=>{
+    const tile = document.createElement("div");
+    tile.className = "qr-tile";
+    const qrDiv = document.createElement("div");
+    qrDiv.className = "qrbox";
+    tile.appendChild(qrDiv);
+    const label = document.createElement("div");
+    label.textContent = itemId;
+    tile.appendChild(label);
+    wrap.appendChild(tile);
+    new QRCode(qrDiv, { text: itemId, width: 100, height: 100 });
+  });
+  printBtn.style.display = "block";
+});
+document.getElementById("btnPrintQr").addEventListener("click", ()=>window.print());
+
+document.getElementById("btnExportExcel").addEventListener("click", ()=>{
+  const ids = Object.keys(itemsCache).sort();
+  if (ids.length === 0){ showMsg("addMsg","No items to export yet.", false); return; }
+  const rows = ids.map(id=>{
+    const it = itemsCache[id];
+    return {
+      "Item ID": id,
+      "District": it.district || "",
+      "Type": it.type || "",
+      "Serial Number": it.serial || "",
+      "Status": it.status || "In office",
+      "Currently With": it.currentSurveyor || "",
+      "Date Added": it.addedDate ? new Date(it.addedDate).toLocaleDateString() : ""
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws["!cols"] = [{wch:16},{wch:10},{wch:10},{wch:16},{wch:14},{wch:16},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Items");
+  const dateStr = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `equipment-items-${dateStr}.xlsx`);
+});
+
+// ---------- CHECK OUT ----------
+function renderOutSelect(){
+  const sel = document.getElementById("outItemSelect");
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— select item —</option>';
+  Object.keys(itemsCache).sort().forEach(id=>{
+    if (itemsCache[id].status !== "With surveyor"){
+      const opt = document.createElement("option");
+      opt.value = id; opt.textContent = `${id} (${itemsCache[id].status || "In office"})`;
+      sel.appendChild(opt);
+    }
+  });
+  if ([...sel.options].some(o=>o.value===current)) sel.value = current;
+}
+
+function renderOutList(){
+  const wrap = document.getElementById("outList");
+  const outIds = Object.keys(itemsCache).filter(id => itemsCache[id].status === "With surveyor");
+  if (outIds.length === 0){ wrap.innerHTML = '<div class="empty">Nothing checked out right now.</div>'; return; }
+  wrap.innerHTML = "";
+  outIds.sort().forEach(id=>{
+    const it = itemsCache[id];
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.innerHTML = `<div><div class="id">${id}</div><div class="meta">with ${it.currentSurveyor || "unknown"}</div></div>
+      <span class="badge out">out</span>`;
+    wrap.appendChild(row);
+  });
+}
+
+document.getElementById("btnCheckout").addEventListener("click", ()=>{
+  const itemId = document.getElementById("outItemSelect").value;
+  const surveyor = document.getElementById("outSurveyor").value.trim();
+  const notes = document.getElementById("outNotes").value.trim();
+  if (!itemId){ showMsg("outMsg","Select an item first.", false); return; }
+  if (!surveyor){ showMsg("outMsg","Enter the surveyor's name.", false); return; }
+
+  const txRef = db.ref("transactions").push();
+  txRef.set({
+    itemId, surveyor,
+    district: itemsCache[itemId].district,
+    checkOutTime: new Date().toISOString(),
+    checkInTime: null,
+    condition: null,
+    notesOut: notes || null,
+    status: "out"
+  }).then(()=>{
+    return db.ref("items/"+itemId).update({ status: "With surveyor", currentSurveyor: surveyor, openTxId: txRef.key });
+  }).then(()=>{
+    showMsg("outMsg", `${itemId} checked out to ${surveyor}.`, true);
+    document.getElementById("outSurveyor").value = "";
+    document.getElementById("outNotes").value = "";
+  }).catch(e=>showMsg("outMsg","Error: "+e.message, false));
+});
+
+// ---------- CHECK IN ----------
+function renderInSelect(){
+  const sel = document.getElementById("inItemSelect");
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— select item —</option>';
+  Object.keys(itemsCache).sort().forEach(id=>{
+    if (itemsCache[id].status === "With surveyor"){
+      const opt = document.createElement("option");
+      opt.value = id; opt.textContent = `${id} (with ${itemsCache[id].currentSurveyor || "?"})`;
+      sel.appendChild(opt);
+    }
+  });
+  if ([...sel.options].some(o=>o.value===current)) sel.value = current;
+}
+
+document.getElementById("btnCheckin").addEventListener("click", ()=>{
+  const itemId = document.getElementById("inItemSelect").value;
+  const condition = document.getElementById("inCondition").value;
+  const notes = document.getElementById("inNotes").value.trim();
+  if (!itemId){ showMsg("inMsg","Select an item first.", false); return; }
+
+  const item = itemsCache[itemId];
+  const txId = item.openTxId;
+  const newStatus = condition === "OK" ? "In office" : "Under repair";
+
+  const updates = {};
+  if (txId){
+    updates["transactions/"+txId+"/checkInTime"] = new Date().toISOString();
+    updates["transactions/"+txId+"/condition"] = condition;
+    updates["transactions/"+txId+"/notesIn"] = notes || null;
+    updates["transactions/"+txId+"/status"] = "closed";
+  }
+  updates["items/"+itemId+"/status"] = newStatus;
+  updates["items/"+itemId+"/currentSurveyor"] = null;
+  updates["items/"+itemId+"/openTxId"] = null;
+
+  db.ref().update(updates).then(()=>{
+    showMsg("inMsg", `${itemId} checked in — marked ${newStatus}.`, true);
+    document.getElementById("inNotes").value = "";
+  }).catch(e=>showMsg("inMsg","Error: "+e.message, false));
+});
+
+// ---------- QR SCANNING ----------
+function setupScanner(buttonId, containerId, targetSelectId){
+  let scanner = null;
+  document.getElementById(buttonId).addEventListener("click", ()=>{
+    const container = document.getElementById(containerId);
+    if (scanner){
+      scanner.stop().then(()=>{ container.innerHTML=""; scanner=null; });
+      return;
+    }
+    container.innerHTML = '<div id="'+containerId+'-inner" style="width:100%"></div>';
+    scanner = new Html5Qrcode(containerId+"-inner");
+    scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 220 },
+      (decodedText)=>{
+        const sel = document.getElementById(targetSelectId);
+        if ([...sel.options].some(o=>o.value===decodedText)){
+          sel.value = decodedText;
+        }
+        scanner.stop().then(()=>{ container.innerHTML=""; scanner=null; });
+      },
+      ()=>{}
+    ).catch(err=>{
+      container.innerHTML = '<div class="empty">Camera unavailable: '+err+'</div>';
+    });
+  });
+}
+setupScanner("startScanOut","qr-reader-out","outItemSelect");
+setupScanner("startScanIn","qr-reader-in","inItemSelect");
+
+// ---------- HISTORY ----------
+let txCache = {};
+db.ref("transactions").on("value", snap=>{
+  txCache = snap.val() || {};
+  renderHistory();
+});
+
+function renderHistItemFilter(){
+  const sel = document.getElementById("histItem");
+  const current = sel.value;
+  sel.innerHTML = '<option value="">All items</option>';
+  Object.keys(itemsCache).sort().forEach(id=>{
+    const opt = document.createElement("option");
+    opt.value = id; opt.textContent = id;
+    sel.appendChild(opt);
+  });
+  if ([...sel.options].some(o=>o.value===current)) sel.value = current;
+}
+document.getElementById("histItem").addEventListener("change", renderHistory);
+document.getElementById("histSurveyor").addEventListener("input", renderHistory);
+
+function renderHistory(){
+  const itemFilter = document.getElementById("histItem").value;
+  const surveyorFilter = (document.getElementById("histSurveyor").value || "").toLowerCase();
+  const wrap = document.getElementById("histList");
+  let rows = Object.entries(txCache);
+  if (itemFilter) rows = rows.filter(([,t]) => t.itemId === itemFilter);
+  if (surveyorFilter) rows = rows.filter(([,t]) => (t.surveyor||"").toLowerCase().includes(surveyorFilter));
+  rows.sort((a,b) => new Date(b[1].checkOutTime) - new Date(a[1].checkOutTime));
+
+  if (rows.length === 0){ wrap.innerHTML = '<div class="empty">No transactions match.</div>'; return; }
+
+  wrap.innerHTML = "";
+  rows.forEach(([txId, t])=>{
+    const div = document.createElement("div");
+    div.className = "history-item";
+    const outTime = t.checkOutTime ? new Date(t.checkOutTime).toLocaleString() : "-";
+    const inTime = t.checkInTime ? new Date(t.checkInTime).toLocaleString() : "still out";
+    const condTag = t.condition ? ` · ${t.condition}` : "";
+    div.innerHTML = `<div class="top"><span>${t.itemId}</span><span>${t.surveyor}</span></div>
+      <div class="sub">out: ${outTime} → in: ${inTime}${condTag}</div>
+      ${t.notesOut ? `<div class="sub">out note: ${t.notesOut}</div>` : ""}
+      ${t.notesIn ? `<div class="sub">in note: ${t.notesIn}</div>` : ""}`;
+    wrap.appendChild(div);
+  });
+}
+</script>
+</body>
+</html>
