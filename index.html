@@ -124,6 +124,7 @@
   <button data-tab="checkout" class="active">Check Out</button>
   <button data-tab="checkin">Check In</button>
   <button data-tab="items">Items</button>
+  <button data-tab="surveyors">Surveyors</button>
   <button data-tab="history">History</button>
 </nav>
 
@@ -139,7 +140,7 @@
       <select id="outItemSelect"><option value="">— select item —</option></select>
 
       <label>Surveyor name</label>
-      <input id="outSurveyor" placeholder="e.g. Ahmed Raza">
+      <select id="outSurveyor"><option value="">— select surveyor —</option></select>
 
       <label>Notes (optional)</label>
       <input id="outNotes" placeholder="e.g. taking spare battery too">
@@ -224,6 +225,25 @@
     </div>
   </section>
 
+  <!-- SURVEYORS -->
+  <section id="tab-surveyors">
+    <div class="card">
+      <h2>Add surveyor</h2>
+      <label>Full name</label>
+      <input id="newSurveyorName" placeholder="e.g. Ahmed Raza">
+      <label>CNIC</label>
+      <input id="newSurveyorCnic" placeholder="e.g. 35202-1234567-1" maxlength="15">
+      <label>Phone (optional)</label>
+      <input id="newSurveyorPhone" placeholder="03xx-xxxxxxx">
+      <button class="primary" id="btnAddSurveyor">Add Surveyor</button>
+      <div class="msg" id="surveyorMsg"></div>
+    </div>
+    <div class="card">
+      <h2>Surveyor list</h2>
+      <div id="surveyorList" class="item-list"><div class="empty">No surveyors added yet.</div></div>
+    </div>
+  </section>
+
   <!-- HISTORY -->
   <section id="tab-history">
     <div class="card">
@@ -285,6 +305,78 @@ function showMsg(id, text, ok){
   setTimeout(()=>{ el.classList.remove("show"); }, 4000);
 }
 
+// ---------- SURVEYORS ----------
+let surveyorsCache = {};
+
+db.ref("surveyors").on("value", snap=>{
+  surveyorsCache = snap.val() || {};
+  renderSurveyorList();
+  renderOutSurveyorSelect();
+});
+
+function renderSurveyorList(){
+  const wrap = document.getElementById("surveyorList");
+  const ids = Object.keys(surveyorsCache);
+  if (ids.length === 0){ wrap.innerHTML = '<div class="empty">No surveyors added yet.</div>'; return; }
+  wrap.innerHTML = "";
+  ids.sort((a,b)=> surveyorsCache[a].name.localeCompare(surveyorsCache[b].name)).forEach(id=>{
+    const s = surveyorsCache[id];
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.innerHTML = `<div><div class="id">${s.name}</div><div class="meta">${s.cnic || "no CNIC on file"}${s.phone ? " · "+s.phone : ""}</div></div>
+      <button class="delSurveyorBtn" data-id="${id}" title="Remove surveyor" style="background:none; border:none; color:var(--bad); font-size:16px; cursor:pointer; padding:4px 6px;">✕</button>`;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll(".delSurveyorBtn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.dataset.id;
+      const name = surveyorsCache[id].name;
+      const stillHolding = Object.values(itemsCache).some(it => it.status === "With surveyor" && it.currentSurveyor === name);
+      if (stillHolding){
+        alert(`${name} currently has equipment checked out. They must return it before you remove them from the list.`);
+        return;
+      }
+      if (confirm(`Remove ${name} from the surveyor list? Past history under their name is kept.`)){
+        db.ref("surveyors/"+id).remove().catch(e=>alert("Error: "+e.message));
+      }
+    });
+  });
+}
+
+function renderOutSurveyorSelect(){
+  const sel = document.getElementById("outSurveyor");
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— select surveyor —</option>';
+  Object.values(surveyorsCache).sort((a,b)=>a.name.localeCompare(b.name)).forEach(s=>{
+    const opt = document.createElement("option");
+    opt.value = s.name; opt.textContent = s.name;
+    sel.appendChild(opt);
+  });
+  if ([...sel.options].some(o=>o.value===current)) sel.value = current;
+}
+
+document.getElementById("btnAddSurveyor").addEventListener("click", ()=>{
+  const name = document.getElementById("newSurveyorName").value.trim();
+  const cnicRaw = document.getElementById("newSurveyorCnic").value.trim();
+  const cnicDigits = cnicRaw.replace(/[^0-9]/g,"");
+  const phone = document.getElementById("newSurveyorPhone").value.trim();
+
+  if (!name){ showMsg("surveyorMsg","Enter a name first.", false); return; }
+  if (cnicDigits.length !== 13){ showMsg("surveyorMsg","CNIC must be 13 digits (format: 35202-1234567-1).", false); return; }
+  const cnicFormatted = `${cnicDigits.slice(0,5)}-${cnicDigits.slice(5,12)}-${cnicDigits.slice(12)}`;
+
+  const alreadyExists = Object.values(surveyorsCache).some(s => s.cnic === cnicFormatted);
+  if (alreadyExists){ showMsg("surveyorMsg", `This CNIC is already registered to a surveyor on the list.`, false); return; }
+
+  db.ref("surveyors").push({ name, cnic: cnicFormatted, phone: phone || null, addedDate: new Date().toISOString() })
+    .then(()=>{
+      showMsg("surveyorMsg", `${name} added.`, true);
+      document.getElementById("newSurveyorName").value = "";
+      document.getElementById("newSurveyorCnic").value = "";
+      document.getElementById("newSurveyorPhone").value = "";
+    }).catch(e=>showMsg("surveyorMsg","Error: "+e.message, false));
+});
+
 // ---------- ITEMS ----------
 let itemsCache = {};
 
@@ -298,6 +390,8 @@ db.ref("items").on("value", snap=>{
   renderQrPrintSelect();
 });
 
+let editingId = null;
+
 function renderItemMaster(){
   const search = (document.getElementById("itemSearch").value || "").toUpperCase();
   const wrap = document.getElementById("itemMaster");
@@ -308,14 +402,78 @@ function renderItemMaster(){
     return;
   }
   wrap.innerHTML = "";
+  const itemTypes = ["DGPS","ROD","BAG","CHARGER","BATTERY","OTHER"];
   filtered.forEach(id=>{
     const it = itemsCache[id];
     const row = document.createElement("div");
     row.className = "item-row";
+
+    if (editingId === id){
+      row.style.flexDirection = "column";
+      row.style.alignItems = "stretch";
+      row.style.gap = "8px";
+      const typeOptions = itemTypes.map(t => `<option value="${t}" ${t===it.type?"selected":""}>${t}</option>`).join("");
+      row.innerHTML = `
+        <div class="id">${id}</div>
+        <label style="margin:2px 0 0;">Type</label>
+        <select id="editType-${id}">${typeOptions}</select>
+        <label style="margin:2px 0 0;">Serial number</label>
+        <input id="editSerial-${id}" value="${it.serial || ""}" placeholder="manufacturer serial no.">
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <button class="secondary" style="margin:0;" data-cancel="${id}">Cancel</button>
+          <button class="primary" style="margin:0;" data-save="${id}">Save</button>
+        </div>`;
+      wrap.appendChild(row);
+      return;
+    }
+
     const badgeClass = it.status === "With surveyor" ? "out" : (it.status === "Under repair" ? "repair" : "office");
-    row.innerHTML = `<div><div class="id">${id}</div><div class="meta">${it.type} · ${it.district}${it.serial ? " · SN:"+it.serial : ""}</div></div>
-      <span class="badge ${badgeClass}">${it.status || "In office"}</span>`;
+    const withWho = (it.status === "With surveyor" && it.currentSurveyor) ? ` · with <b>${it.currentSurveyor}</b>` : "";
+    row.innerHTML = `<div><div class="id">${id}</div><div class="meta">${it.type} · ${it.district}${it.serial ? " · SN:"+it.serial : ""}${withWho}</div></div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span class="badge ${badgeClass}">${it.status || "In office"}</span>
+        <button class="editBtn" data-id="${id}" title="Edit item" style="background:none; border:none; color:var(--muted); font-size:15px; cursor:pointer; padding:4px 6px;">✎</button>
+        <button class="delBtn" data-id="${id}" title="Delete item" style="background:none; border:none; color:var(--bad); font-size:16px; cursor:pointer; padding:4px 6px;">✕</button>
+      </div>`;
     wrap.appendChild(row);
+  });
+
+  wrap.querySelectorAll(".editBtn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      editingId = btn.dataset.id;
+      renderItemMaster();
+    });
+  });
+  wrap.querySelectorAll("[data-cancel]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      editingId = null;
+      renderItemMaster();
+    });
+  });
+  wrap.querySelectorAll("[data-save]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.dataset.save;
+      const newType = document.getElementById("editType-"+id).value;
+      const newSerial = document.getElementById("editSerial-"+id).value.trim();
+      db.ref("items/"+id).update({ type: newType, serial: newSerial || null }).then(()=>{
+        editingId = null;
+      }).catch(e=>alert("Error saving: "+e.message));
+    });
+  });
+
+  wrap.querySelectorAll(".delBtn").forEach(btn=>{
+    btn.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const it = itemsCache[id];
+      if (it.status === "With surveyor"){
+        alert(`${id} is currently checked out to ${it.currentSurveyor || "a surveyor"}. Check it in before deleting.`);
+        return;
+      }
+      if (confirm(`Delete ${id} permanently? Past transaction history for this item will be kept for records, but the item itself will be removed from the active list.`)){
+        db.ref("items/"+id).remove().catch(e=>alert("Error deleting: "+e.message));
+      }
+    });
   });
 }
 document.getElementById("itemSearch").addEventListener("input", renderItemMaster);
