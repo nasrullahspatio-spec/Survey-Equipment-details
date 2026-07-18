@@ -6,6 +6,7 @@
 <title>Spatio Equipment Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.0/firebase-app-compat.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.0/firebase-database-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.0/firebase-auth-compat.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -115,9 +116,26 @@
 </head>
 <body>
 
+<div id="loginScreen" style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="width:100%; max-width:360px;">
+    <h2 style="text-align:center; font-size:16px;">Sign in — Equipment Tracker</h2>
+    <label>Email</label>
+    <input id="loginEmail" type="email" placeholder="district@spatio-tracker.local">
+    <label>Password</label>
+    <input id="loginPassword" type="password" placeholder="••••••••">
+    <button class="primary" id="btnLogin">Sign In</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none;">
+
 <header>
   <h1>Equipment Tracker — Lahore</h1>
-  <div class="status"><span class="dot" id="connDot"></span><span id="connText">connecting…</span></div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <div class="status"><span class="dot" id="connDot"></span><span id="connText">connecting…</span></div>
+    <button id="btnLogout" style="background:none; border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer;">Sign out</button>
+  </div>
 </header>
 
 <nav>
@@ -210,7 +228,7 @@
 
     <div class="card">
       <h2>All items</h2>
-      <input class="searchbar" id="itemSearch" placeholder="search by ID or type…">
+      <input class="searchbar" id="itemSearch" placeholder="search by ID, type, or serial number…">
       <div id="itemMaster" class="item-list"><div class="empty">Loading…</div></div>
       <button class="secondary" id="btnExportExcel">⬇️ Export item list to Excel</button>
     </div>
@@ -267,6 +285,8 @@
 
 </main>
 
+</div>
+
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyCaISf9wxBUGKn1RJ5-CWQkDNYfZdqHdqY",
@@ -279,6 +299,45 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
+
+// ---------- AUTH GATE ----------
+let appInitialized = false;
+
+auth.onAuthStateChanged(user => {
+  if (user){
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("appRoot").style.display = "block";
+    if (!appInitialized){
+      appInitialized = true;
+      initApp(); // sets up all the db listeners, defined at bottom of this script
+    }
+  } else {
+    document.getElementById("loginScreen").style.display = "flex";
+    document.getElementById("appRoot").style.display = "none";
+  }
+});
+
+document.getElementById("btnLogin").addEventListener("click", ()=>{
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const msg = document.getElementById("loginMsg");
+  if (!email || !password){
+    msg.textContent = "Enter both email and password.";
+    msg.className = "msg show err";
+    return;
+  }
+  auth.signInWithEmailAndPassword(email, password).catch(err=>{
+    msg.textContent = "Sign in failed: " + err.message;
+    msg.className = "msg show err";
+  });
+});
+
+document.getElementById("btnLogout").addEventListener("click", ()=>{
+  auth.signOut();
+});
+
+function initApp(){
 
 // connection status
 db.ref(".info/connected").on("value", snap => {
@@ -396,7 +455,7 @@ function renderItemMaster(){
   const search = (document.getElementById("itemSearch").value || "").toUpperCase();
   const wrap = document.getElementById("itemMaster");
   const ids = Object.keys(itemsCache).sort();
-  const filtered = ids.filter(id => id.includes(search) || (itemsCache[id].type||"").toUpperCase().includes(search));
+  const filtered = ids.filter(id => id.includes(search) || (itemsCache[id].type||"").toUpperCase().includes(search) || (itemsCache[id].serial||"").toUpperCase().includes(search));
   if (filtered.length === 0){
     wrap.innerHTML = '<div class="empty">No items yet. Add one above.</div>';
     return;
@@ -483,6 +542,11 @@ document.getElementById("btnAddItem").addEventListener("click", ()=>{
   const type = document.getElementById("newType").value;
   let number = document.getElementById("newNumber").value.trim();
   const serial = document.getElementById("newSerial").value.trim();
+
+  if (type === "DGPS" && !serial){
+    showMsg("addMsg","Serial number is required for DGPS units — it's your most reliable way to identify the unit if the QR label peels off.", false);
+    return;
+  }
 
   if (!number){
     // auto-generate next number for this district+type
@@ -741,6 +805,8 @@ function renderHistory(){
     wrap.appendChild(div);
   });
 }
+
+} // end initApp
 </script>
 </body>
 </html>
