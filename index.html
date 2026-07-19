@@ -131,7 +131,8 @@
 <div id="appRoot" style="display:none;">
 
 <header>
-  <h1>Equipment Tracker — Lahore</h1>
+  <h1>Equipment Tracker — Lahore Division</h1>
+  <div style="font-size:11px; color:var(--muted);" id="roleTag"></div>
   <div style="display:flex; align-items:center; gap:12px;">
     <div class="status"><span class="dot" id="connDot"></span><span id="connText">connecting…</span></div>
     <button id="btnLogout" style="background:none; border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer;">Sign out</button>
@@ -144,6 +145,7 @@
   <button data-tab="items">Items</button>
   <button data-tab="surveyors">Surveyors</button>
   <button data-tab="history">History</button>
+  <button data-tab="users" id="navUsers" style="display:none;">Users</button>
 </nav>
 
 <main>
@@ -160,6 +162,19 @@
       <label>Surveyor name</label>
       <select id="outSurveyor"><option value="">— select surveyor —</option></select>
 
+      <label>Custody type</label>
+      <select id="outCustodyType">
+        <option value="daily">Daily — same-day return to office</option>
+        <option value="extended">Extended field custody — remote site, held for a period</option>
+      </select>
+
+      <div id="extendedFields" style="display:none;">
+        <label>Expected return date</label>
+        <input id="outReturnDate" type="date">
+        <label>Affidavit reference / number</label>
+        <input id="outAffidavit" placeholder="e.g. affidavit filed 19-Jul-2026, ref #12">
+      </div>
+
       <label>Notes (optional)</label>
       <input id="outNotes" placeholder="e.g. taking spare battery too">
 
@@ -168,8 +183,13 @@
     </div>
 
     <div class="card">
-      <h2>Currently out</h2>
+      <h2>Currently out — daily</h2>
       <div id="outList" class="item-list"><div class="empty">Loading…</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Extended field custody</h2>
+      <div id="extendedList" class="item-list"><div class="empty">Loading…</div></div>
     </div>
   </section>
 
@@ -203,8 +223,13 @@
       <h2>Add new item</h2>
       <div class="row">
         <div>
-          <label>District code</label>
-          <input id="newDistrict" value="LHR" maxlength="4" style="text-transform:uppercase">
+          <label>District</label>
+          <select id="newDistrict">
+            <option value="LHR">Lahore</option>
+            <option value="KSR">Kasur</option>
+            <option value="NKS">Nankana Sahib</option>
+            <option value="SKP">Sheikhupura</option>
+          </select>
         </div>
         <div>
           <label>Type</label>
@@ -228,7 +253,16 @@
 
     <div class="card">
       <h2>All items</h2>
-      <input class="searchbar" id="itemSearch" placeholder="search by ID, type, or serial number…">
+      <div class="row">
+        <input class="searchbar" id="itemSearch" placeholder="search by ID, type, or serial number…" style="margin-bottom:0;">
+        <select id="itemDistrictFilter" style="max-width:150px;">
+          <option value="">All districts</option>
+          <option value="LHR">Lahore</option>
+          <option value="KSR">Kasur</option>
+          <option value="NKS">Nankana Sahib</option>
+          <option value="SKP">Sheikhupura</option>
+        </select>
+      </div>
       <div id="itemMaster" class="item-list"><div class="empty">Loading…</div></div>
       <button class="secondary" id="btnExportExcel">⬇️ Export item list to Excel</button>
     </div>
@@ -249,6 +283,13 @@
       <h2>Add surveyor</h2>
       <label>Full name</label>
       <input id="newSurveyorName" placeholder="e.g. Ahmed Raza">
+      <label>District</label>
+      <select id="newSurveyorDistrict">
+        <option value="LHR">Lahore</option>
+        <option value="KSR">Kasur</option>
+        <option value="NKS">Nankana Sahib</option>
+        <option value="SKP">Sheikhupura</option>
+      </select>
       <label>CNIC</label>
       <input id="newSurveyorCnic" placeholder="e.g. 35202-1234567-1" maxlength="15">
       <label>Phone (optional)</label>
@@ -259,6 +300,46 @@
     <div class="card">
       <h2>Surveyor list</h2>
       <div id="surveyorList" class="item-list"><div class="empty">No surveyors added yet.</div></div>
+    </div>
+  </section>
+
+  <!-- NO ROLE ASSIGNED -->
+  <section id="tab-noaccess" style="display:none;">
+    <div class="card">
+      <h2>No access assigned yet</h2>
+      <p style="font-size:14px; color:var(--muted);">Your login works, but no role has been assigned to your account yet. Contact the divisional admin to get access.</p>
+    </div>
+  </section>
+
+  <!-- USERS (admin only) -->
+  <section id="tab-users">
+    <div class="card">
+      <h2>Add / update a user's access</h2>
+      <p style="font-size:12px; color:var(--muted); margin-top:0;">Create the login first in the Firebase console (Authentication tab), copy their User UID from there, then assign their role here.</p>
+      <label>User UID (from Firebase Authentication console)</label>
+      <input id="newUserUid" placeholder="e.g. a1B2c3D4e5F6...">
+      <label>Name (for your reference)</label>
+      <input id="newUserName" placeholder="e.g. Bilal — Kasur Manager">
+      <label>Role</label>
+      <select id="newUserRole">
+        <option value="manager">District Manager</option>
+        <option value="admin">Admin — full access to all districts</option>
+      </select>
+      <div id="newUserDistrictWrap">
+        <label>Assigned district</label>
+        <select id="newUserDistrict">
+          <option value="LHR">Lahore</option>
+          <option value="KSR">Kasur</option>
+          <option value="NKS">Nankana Sahib</option>
+          <option value="SKP">Sheikhupura</option>
+        </select>
+      </div>
+      <button class="primary" id="btnAddUser">Save Access</button>
+      <div class="msg" id="userMsg"></div>
+    </div>
+    <div class="card">
+      <h2>Users with access</h2>
+      <div id="userList" class="item-list"><div class="empty">Loading…</div></div>
     </div>
   </section>
 
@@ -303,20 +384,50 @@ const auth = firebase.auth();
 
 // ---------- AUTH GATE ----------
 let appInitialized = false;
+let currentUid = null;
+let currentRole = null; // "admin" or "manager"
+let currentDistrict = null; // e.g. "LHR", null for admin
 
 auth.onAuthStateChanged(user => {
   if (user){
     document.getElementById("loginScreen").style.display = "none";
     document.getElementById("appRoot").style.display = "block";
-    if (!appInitialized){
-      appInitialized = true;
-      initApp(); // sets up all the db listeners, defined at bottom of this script
-    }
+    currentUid = user.uid;
+    db.ref("roles/"+user.uid).once("value").then(snap=>{
+      const role = snap.val();
+      if (!role){
+        // logged in, but no access assigned
+        document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+        document.querySelectorAll("main section").forEach(s=>s.classList.remove("active"));
+        document.getElementById("tab-noaccess").style.display = "block";
+        document.getElementById("tab-noaccess").classList.add("active");
+        document.querySelectorAll("nav button").forEach(b => b.style.display = "none");
+        document.getElementById("roleTag").textContent = "no access assigned";
+        return;
+      }
+      currentRole = role.role;
+      currentDistrict = role.district || null;
+      document.getElementById("roleTag").textContent = currentRole === "admin"
+        ? "Admin — all districts"
+        : `Manager — ${districtName(currentDistrict)}`;
+      if (currentRole === "admin"){
+        document.getElementById("navUsers").style.display = "";
+      }
+      if (!appInitialized){
+        appInitialized = true;
+        initApp();
+      }
+    });
   } else {
     document.getElementById("loginScreen").style.display = "flex";
     document.getElementById("appRoot").style.display = "none";
   }
 });
+
+function districtName(code){
+  const names = { LHR: "Lahore", KSR: "Kasur", NKS: "Nankana Sahib", SKP: "Sheikhupura" };
+  return names[code] || code;
+}
 
 document.getElementById("btnLogin").addEventListener("click", ()=>{
   const email = document.getElementById("loginEmail").value.trim();
@@ -338,6 +449,14 @@ document.getElementById("btnLogout").addEventListener("click", ()=>{
 });
 
 function initApp(){
+
+if (currentRole === "manager"){
+  ["newDistrict","itemDistrictFilter","newSurveyorDistrict"].forEach(id=>{
+    const el = document.getElementById(id);
+    el.value = currentDistrict;
+    el.disabled = true;
+  });
+}
 
 // connection status
 db.ref(".info/connected").on("value", snap => {
@@ -375,14 +494,15 @@ db.ref("surveyors").on("value", snap=>{
 
 function renderSurveyorList(){
   const wrap = document.getElementById("surveyorList");
-  const ids = Object.keys(surveyorsCache);
+  let ids = Object.keys(surveyorsCache);
+  if (currentRole === "manager") ids = ids.filter(id => surveyorsCache[id].district === currentDistrict);
   if (ids.length === 0){ wrap.innerHTML = '<div class="empty">No surveyors added yet.</div>'; return; }
   wrap.innerHTML = "";
   ids.sort((a,b)=> surveyorsCache[a].name.localeCompare(surveyorsCache[b].name)).forEach(id=>{
     const s = surveyorsCache[id];
     const row = document.createElement("div");
     row.className = "item-row";
-    row.innerHTML = `<div><div class="id">${s.name}</div><div class="meta">${s.cnic || "no CNIC on file"}${s.phone ? " · "+s.phone : ""}</div></div>
+    row.innerHTML = `<div><div class="id">${s.name}</div><div class="meta">${districtName(s.district)}${s.cnic ? " · "+s.cnic : " · no CNIC on file"}${s.phone ? " · "+s.phone : ""}</div></div>
       <button class="delSurveyorBtn" data-id="${id}" title="Remove surveyor" style="background:none; border:none; color:var(--bad); font-size:16px; cursor:pointer; padding:4px 6px;">✕</button>`;
     wrap.appendChild(row);
   });
@@ -406,7 +526,9 @@ function renderOutSurveyorSelect(){
   const sel = document.getElementById("outSurveyor");
   const current = sel.value;
   sel.innerHTML = '<option value="">— select surveyor —</option>';
-  Object.values(surveyorsCache).sort((a,b)=>a.name.localeCompare(b.name)).forEach(s=>{
+  let list = Object.values(surveyorsCache);
+  if (currentRole === "manager") list = list.filter(s => s.district === currentDistrict);
+  list.sort((a,b)=>a.name.localeCompare(b.name)).forEach(s=>{
     const opt = document.createElement("option");
     opt.value = s.name; opt.textContent = s.name;
     sel.appendChild(opt);
@@ -416,6 +538,7 @@ function renderOutSurveyorSelect(){
 
 document.getElementById("btnAddSurveyor").addEventListener("click", ()=>{
   const name = document.getElementById("newSurveyorName").value.trim();
+  const district = document.getElementById("newSurveyorDistrict").value;
   const cnicRaw = document.getElementById("newSurveyorCnic").value.trim();
   const cnicDigits = cnicRaw.replace(/[^0-9]/g,"");
   const phone = document.getElementById("newSurveyorPhone").value.trim();
@@ -427,7 +550,7 @@ document.getElementById("btnAddSurveyor").addEventListener("click", ()=>{
   const alreadyExists = Object.values(surveyorsCache).some(s => s.cnic === cnicFormatted);
   if (alreadyExists){ showMsg("surveyorMsg", `This CNIC is already registered to a surveyor on the list.`, false); return; }
 
-  db.ref("surveyors").push({ name, cnic: cnicFormatted, phone: phone || null, addedDate: new Date().toISOString() })
+  db.ref("surveyors").push({ name, district, cnic: cnicFormatted, phone: phone || null, addedDate: new Date().toISOString() })
     .then(()=>{
       showMsg("surveyorMsg", `${name} added.`, true);
       document.getElementById("newSurveyorName").value = "";
@@ -453,9 +576,11 @@ let editingId = null;
 
 function renderItemMaster(){
   const search = (document.getElementById("itemSearch").value || "").toUpperCase();
+  const districtFilter = currentRole === "manager" ? currentDistrict : document.getElementById("itemDistrictFilter").value;
   const wrap = document.getElementById("itemMaster");
   const ids = Object.keys(itemsCache).sort();
-  const filtered = ids.filter(id => id.includes(search) || (itemsCache[id].type||"").toUpperCase().includes(search) || (itemsCache[id].serial||"").toUpperCase().includes(search));
+  let filtered = ids.filter(id => id.includes(search) || (itemsCache[id].type||"").toUpperCase().includes(search) || (itemsCache[id].serial||"").toUpperCase().includes(search));
+  if (districtFilter) filtered = filtered.filter(id => itemsCache[id].district === districtFilter);
   if (filtered.length === 0){
     wrap.innerHTML = '<div class="empty">No items yet. Add one above.</div>';
     return;
@@ -536,6 +661,7 @@ function renderItemMaster(){
   });
 }
 document.getElementById("itemSearch").addEventListener("input", renderItemMaster);
+document.getElementById("itemDistrictFilter").addEventListener("change", renderItemMaster);
 
 document.getElementById("btnAddItem").addEventListener("click", ()=>{
   const district = (document.getElementById("newDistrict").value || "LHR").toUpperCase().trim();
@@ -638,6 +764,7 @@ function renderOutSelect(){
   const current = sel.value;
   sel.innerHTML = '<option value="">— select item —</option>';
   Object.keys(itemsCache).sort().forEach(id=>{
+    if (currentRole === "manager" && itemsCache[id].district !== currentDistrict) return;
     if (itemsCache[id].status !== "With surveyor"){
       const opt = document.createElement("option");
       opt.value = id; opt.textContent = `${id} (${itemsCache[id].status || "In office"})`;
@@ -647,43 +774,154 @@ function renderOutSelect(){
   if ([...sel.options].some(o=>o.value===current)) sel.value = current;
 }
 
+let verifyingId = null;
+
 function renderOutList(){
-  const wrap = document.getElementById("outList");
-  const outIds = Object.keys(itemsCache).filter(id => itemsCache[id].status === "With surveyor");
-  if (outIds.length === 0){ wrap.innerHTML = '<div class="empty">Nothing checked out right now.</div>'; return; }
-  wrap.innerHTML = "";
-  outIds.sort().forEach(id=>{
-    const it = itemsCache[id];
-    const row = document.createElement("div");
-    row.className = "item-row";
-    row.innerHTML = `<div><div class="id">${id}</div><div class="meta">with ${it.currentSurveyor || "unknown"}</div></div>
-      <span class="badge out">out</span>`;
-    wrap.appendChild(row);
-  });
+  const dailyWrap = document.getElementById("outList");
+  const extWrap = document.getElementById("extendedList");
+  const outIds = Object.keys(itemsCache).filter(id => itemsCache[id].status === "With surveyor" && (currentRole !== "manager" || itemsCache[id].district === currentDistrict));
+  const dailyIds = outIds.filter(id => (itemsCache[id].custodyType || "daily") === "daily");
+  const extIds = outIds.filter(id => itemsCache[id].custodyType === "extended");
+
+  if (dailyIds.length === 0){ dailyWrap.innerHTML = '<div class="empty">Nothing checked out right now.</div>'; }
+  else {
+    dailyWrap.innerHTML = "";
+    dailyIds.sort().forEach(id=>{
+      const it = itemsCache[id];
+      const row = document.createElement("div");
+      row.className = "item-row";
+      row.innerHTML = `<div><div class="id">${id}</div><div class="meta">with ${it.currentSurveyor || "unknown"}</div></div>
+        <span class="badge out">out</span>`;
+      dailyWrap.appendChild(row);
+    });
+  }
+
+  if (extIds.length === 0){ extWrap.innerHTML = '<div class="empty">No extended field assignments right now.</div>'; }
+  else {
+    extWrap.innerHTML = "";
+    const todayStr = new Date().toISOString().slice(0,10);
+    extIds.sort().forEach(id=>{
+      const it = itemsCache[id];
+      const overdue = it.expectedReturn && it.expectedReturn < todayStr;
+
+      let verifyLine = "never verified";
+      let verifyOverdue = true;
+      if (it.lastVerified){
+        const daysSince = Math.floor((new Date(todayStr) - new Date(it.lastVerified)) / 86400000);
+        verifyLine = `last verified ${daysSince}d ago (${it.lastVerifiedStatus || "OK"})`;
+        verifyOverdue = daysSince > 14;
+      }
+
+      const row = document.createElement("div");
+      row.className = "item-row";
+      row.style.flexDirection = "column";
+      row.style.alignItems = "stretch";
+      row.style.gap = "8px";
+
+      if (verifyingId === id){
+        row.innerHTML = `
+          <div><div class="id">${id}</div><div class="meta">with ${it.currentSurveyor || "unknown"}</div></div>
+          <label style="margin:2px 0 0;">Status after calling surveyor</label>
+          <select id="verifyStatus-${id}">
+            <option value="OK">OK — surveyor confirmed equipment is fine</option>
+            <option value="Issue">Issue — problem reported</option>
+          </select>
+          <label style="margin:2px 0 0;">Notes (optional)</label>
+          <input id="verifyNotes-${id}" placeholder="e.g. spoke to surveyor, working fine">
+          <div style="display:flex; gap:8px; margin-top:4px;">
+            <button class="secondary" style="margin:0;" data-verify-cancel="${id}">Cancel</button>
+            <button class="primary" style="margin:0;" data-verify-save="${id}">Log Verification</button>
+          </div>`;
+      } else {
+        row.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div><div class="id">${id}</div><div class="meta">with ${it.currentSurveyor || "unknown"} · expected back ${it.expectedReturn || "not set"}</div></div>
+            <span class="badge ${overdue ? 'repair' : 'out'}">${overdue ? 'overdue' : 'in field'}</span>
+          </div>
+          <div class="meta" style="${verifyOverdue ? 'color:var(--warn);' : ''}">${verifyLine}${verifyOverdue ? " · verification due" : ""}</div>
+          <button class="secondary" style="margin:0;" data-verify-start="${id}">📞 Log a verification call</button>`;
+      }
+      extWrap.appendChild(row);
+    });
+
+    extWrap.querySelectorAll("[data-verify-start]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{ verifyingId = btn.dataset.verifyStart; renderOutList(); });
+    });
+    extWrap.querySelectorAll("[data-verify-cancel]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{ verifyingId = null; renderOutList(); });
+    });
+    extWrap.querySelectorAll("[data-verify-save]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const id = btn.dataset.verifySave;
+        const status = document.getElementById("verifyStatus-"+id).value;
+        const notes = document.getElementById("verifyNotes-"+id).value.trim();
+        const today = new Date().toISOString().slice(0,10);
+        const txId = itemsCache[id].openTxId;
+        const updates = {};
+        updates["items/"+id+"/lastVerified"] = today;
+        updates["items/"+id+"/lastVerifiedStatus"] = status;
+        if (txId){
+          const vRef = db.ref("transactions/"+txId+"/verifications").push();
+          vRef.set({ date: today, status, notes: notes || null });
+        }
+        db.ref().update(updates).then(()=>{
+          verifyingId = null;
+        }).catch(e=>alert("Error: "+e.message));
+      });
+    });
+  }
 }
+
+document.getElementById("outCustodyType").addEventListener("change", (e)=>{
+  document.getElementById("extendedFields").style.display = e.target.value === "extended" ? "block" : "none";
+});
 
 document.getElementById("btnCheckout").addEventListener("click", ()=>{
   const itemId = document.getElementById("outItemSelect").value;
   const surveyor = document.getElementById("outSurveyor").value.trim();
   const notes = document.getElementById("outNotes").value.trim();
+  const custodyType = document.getElementById("outCustodyType").value;
+  const returnDate = document.getElementById("outReturnDate").value;
+  const affidavit = document.getElementById("outAffidavit").value.trim();
+
   if (!itemId){ showMsg("outMsg","Select an item first.", false); return; }
   if (!surveyor){ showMsg("outMsg","Enter the surveyor's name.", false); return; }
+  if (custodyType === "extended" && !returnDate){
+    showMsg("outMsg","Extended custody requires an expected return date.", false); return;
+  }
+  if (custodyType === "extended" && !affidavit){
+    showMsg("outMsg","Extended custody requires an affidavit reference on file.", false); return;
+  }
 
   const txRef = db.ref("transactions").push();
   txRef.set({
     itemId, surveyor,
     district: itemsCache[itemId].district,
+    custodyType,
+    expectedReturn: custodyType === "extended" ? returnDate : null,
+    affidavit: custodyType === "extended" ? affidavit : null,
     checkOutTime: new Date().toISOString(),
     checkInTime: null,
     condition: null,
     notesOut: notes || null,
     status: "out"
   }).then(()=>{
-    return db.ref("items/"+itemId).update({ status: "With surveyor", currentSurveyor: surveyor, openTxId: txRef.key });
+    return db.ref("items/"+itemId).update({
+      status: "With surveyor",
+      currentSurveyor: surveyor,
+      custodyType,
+      expectedReturn: custodyType === "extended" ? returnDate : null,
+      affidavit: custodyType === "extended" ? affidavit : null,
+      openTxId: txRef.key
+    });
   }).then(()=>{
-    showMsg("outMsg", `${itemId} checked out to ${surveyor}.`, true);
+    showMsg("outMsg", `${itemId} checked out to ${surveyor} (${custodyType === "extended" ? "extended custody" : "daily"}).`, true);
     document.getElementById("outSurveyor").value = "";
     document.getElementById("outNotes").value = "";
+    document.getElementById("outReturnDate").value = "";
+    document.getElementById("outAffidavit").value = "";
+    document.getElementById("outCustodyType").value = "daily";
+    document.getElementById("extendedFields").style.display = "none";
   }).catch(e=>showMsg("outMsg","Error: "+e.message, false));
 });
 
@@ -693,6 +931,7 @@ function renderInSelect(){
   const current = sel.value;
   sel.innerHTML = '<option value="">— select item —</option>';
   Object.keys(itemsCache).sort().forEach(id=>{
+    if (currentRole === "manager" && itemsCache[id].district !== currentDistrict) return;
     if (itemsCache[id].status === "With surveyor"){
       const opt = document.createElement("option");
       opt.value = id; opt.textContent = `${id} (with ${itemsCache[id].currentSurveyor || "?"})`;
@@ -722,6 +961,11 @@ document.getElementById("btnCheckin").addEventListener("click", ()=>{
   updates["items/"+itemId+"/status"] = newStatus;
   updates["items/"+itemId+"/currentSurveyor"] = null;
   updates["items/"+itemId+"/openTxId"] = null;
+  updates["items/"+itemId+"/custodyType"] = null;
+  updates["items/"+itemId+"/expectedReturn"] = null;
+  updates["items/"+itemId+"/affidavit"] = null;
+  updates["items/"+itemId+"/lastVerified"] = null;
+  updates["items/"+itemId+"/lastVerifiedStatus"] = null;
 
   db.ref().update(updates).then(()=>{
     showMsg("inMsg", `${itemId} checked in — marked ${newStatus}.`, true);
@@ -771,6 +1015,7 @@ function renderHistItemFilter(){
   const current = sel.value;
   sel.innerHTML = '<option value="">All items</option>';
   Object.keys(itemsCache).sort().forEach(id=>{
+    if (currentRole === "manager" && itemsCache[id].district !== currentDistrict) return;
     const opt = document.createElement("option");
     opt.value = id; opt.textContent = id;
     sel.appendChild(opt);
@@ -785,6 +1030,7 @@ function renderHistory(){
   const surveyorFilter = (document.getElementById("histSurveyor").value || "").toLowerCase();
   const wrap = document.getElementById("histList");
   let rows = Object.entries(txCache);
+  if (currentRole === "manager") rows = rows.filter(([,t]) => t.district === currentDistrict);
   if (itemFilter) rows = rows.filter(([,t]) => t.itemId === itemFilter);
   if (surveyorFilter) rows = rows.filter(([,t]) => (t.surveyor||"").toLowerCase().includes(surveyorFilter));
   rows.sort((a,b) => new Date(b[1].checkOutTime) - new Date(a[1].checkOutTime));
@@ -798,11 +1044,61 @@ function renderHistory(){
     const outTime = t.checkOutTime ? new Date(t.checkOutTime).toLocaleString() : "-";
     const inTime = t.checkInTime ? new Date(t.checkInTime).toLocaleString() : "still out";
     const condTag = t.condition ? ` · ${t.condition}` : "";
+    const custodyTag = t.custodyType === "extended" ? ` · extended (return by ${t.expectedReturn || "?"})` : "";
     div.innerHTML = `<div class="top"><span>${t.itemId}</span><span>${t.surveyor}</span></div>
-      <div class="sub">out: ${outTime} → in: ${inTime}${condTag}</div>
+      <div class="sub">out: ${outTime} → in: ${inTime}${condTag}${custodyTag}</div>
       ${t.notesOut ? `<div class="sub">out note: ${t.notesOut}</div>` : ""}
       ${t.notesIn ? `<div class="sub">in note: ${t.notesIn}</div>` : ""}`;
     wrap.appendChild(div);
+  });
+}
+
+// ---------- USER ROLES (admin only) ----------
+document.getElementById("newUserRole").addEventListener("change", (e)=>{
+  document.getElementById("newUserDistrictWrap").style.display = e.target.value === "admin" ? "none" : "block";
+});
+
+if (currentRole === "admin"){
+  db.ref("roles").on("value", snap=>{
+    const roles = snap.val() || {};
+    const wrap = document.getElementById("userList");
+    const uids = Object.keys(roles);
+    if (uids.length === 0){ wrap.innerHTML = '<div class="empty">No users assigned yet.</div>'; return; }
+    wrap.innerHTML = "";
+    uids.forEach(uid=>{
+      const r = roles[uid];
+      const row = document.createElement("div");
+      row.className = "item-row";
+      const roleLabel = r.role === "admin" ? "Admin — all districts" : `Manager — ${districtName(r.district)}`;
+      row.innerHTML = `<div><div class="id">${r.name || uid}</div><div class="meta">${roleLabel} · UID: ${uid.slice(0,10)}…</div></div>
+        <button class="delUserBtn" data-id="${uid}" title="Remove access" style="background:none; border:none; color:var(--bad); font-size:16px; cursor:pointer; padding:4px 6px;">✕</button>`;
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll(".delUserBtn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        if (btn.dataset.id === currentUid){ alert("You can't remove your own admin access from here."); return; }
+        if (confirm("Remove this user's access? They'll be logged out of the app on their next action.")){
+          db.ref("roles/"+btn.dataset.id).remove().catch(e=>alert("Error: "+e.message));
+        }
+      });
+    });
+  });
+
+  document.getElementById("btnAddUser").addEventListener("click", ()=>{
+    const uid = document.getElementById("newUserUid").value.trim();
+    const name = document.getElementById("newUserName").value.trim();
+    const role = document.getElementById("newUserRole").value;
+    const district = document.getElementById("newUserDistrict").value;
+    if (!uid){ showMsg("userMsg","Paste the user's UID from the Firebase Authentication console.", false); return; }
+    if (!name){ showMsg("userMsg","Enter a name for your own reference.", false); return; }
+    db.ref("roles/"+uid).set({
+      name, role,
+      district: role === "manager" ? district : null
+    }).then(()=>{
+      showMsg("userMsg", `Access saved for ${name}.`, true);
+      document.getElementById("newUserUid").value = "";
+      document.getElementById("newUserName").value = "";
+    }).catch(e=>showMsg("userMsg","Error: "+e.message, false));
   });
 }
 
