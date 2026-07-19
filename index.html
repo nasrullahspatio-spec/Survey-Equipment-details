@@ -112,6 +112,17 @@
     #qr-print, #qr-print *{display:flex !important;}
     #qr-print{flex-wrap:wrap; gap:12px;}
   }
+
+  /* DGPS Road Loader */
+  .dgps-loader{position:relative;width:200px;height:60px;overflow:hidden;}
+  .road{position:absolute;bottom:8px;left:0;right:0;height:2px;background:var(--line);border-radius:1px;}
+  .road-lines{position:absolute;bottom:8px;left:0;right:0;height:2px;background:repeating-linear-gradient(90deg, var(--accent) 0px, var(--accent) 16px, transparent 16px, transparent 32px);animation:roadScroll 0.8s linear infinite;border-radius:1px;}
+  .rover-wrap{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);animation:roverBounce 1.2s ease-in-out infinite;}
+  .rover{filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));}
+  .blink{animation:blink 1s ease-in-out infinite;}
+  @keyframes roadScroll{from{transform:translateX(0);}to{transform:translateX(-32px);}}
+  @keyframes roverBounce{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-6px);}}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
 </style>
 <base target="_blank">
 </head>
@@ -129,10 +140,28 @@
   </div>
 </div>
 
-<div id="loadingScreen" style="min-height:100vh; display:none; align-items:center; justify-content:center; padding:20px; flex-direction:column; gap:12px;">
-  <div style="width:40px;height:40px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;"></div>
+<div id="loadingScreen" style="min-height:100vh; display:none; align-items:center; justify-content:center; padding:20px; flex-direction:column; gap:16px;">
+  <div class="dgps-loader">
+    <div class="road">
+      <div class="road-lines"></div>
+    </div>
+    <div class="rover-wrap">
+      <svg class="rover" viewBox="0 0 48 48" width="40" height="40" fill="none">
+        <!-- Tripod legs -->
+        <line x1="24" y1="44" x2="12" y2="36" stroke="#9fb0ac" stroke-width="2" stroke-linecap="round"/>
+        <line x1="24" y1="44" x2="36" y2="36" stroke="#9fb0ac" stroke-width="2" stroke-linecap="round"/>
+        <line x1="24" y1="44" x2="24" y2="20" stroke="#9fb0ac" stroke-width="2" stroke-linecap="round"/>
+        <!-- Receiver box -->
+        <rect x="18" y="14" width="12" height="8" rx="2" fill="var(--accent)"/>
+        <!-- Antenna -->
+        <line x1="24" y1="14" x2="24" y2="6" stroke="#eef2ef" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="24" cy="4" r="2.5" fill="var(--good)"/>
+        <!-- Blink dot -->
+        <circle cx="28" cy="18" r="1.5" fill="var(--good)" class="blink"/>
+      </svg>
+    </div>
+  </div>
   <div style="font-size:13px; color:var(--muted);">Checking access…</div>
-  <style>@keyframes spin{to{transform:rotate(360deg);}}</style>
 </div>
 
 
@@ -308,7 +337,18 @@
     </div>
     <div class="card">
       <h2>Surveyor list</h2>
+      <div class="row">
+        <input class="searchbar" id="surveyorSearch" placeholder="search by name, CNIC, or phone…" style="margin-bottom:0;">
+        <select id="surveyorDistrictFilter" style="max-width:150px;">
+          <option value="">All districts</option>
+          <option value="LHR">Lahore</option>
+          <option value="KSR">Kasur</option>
+          <option value="NKS">Nankana Sahib</option>
+          <option value="SKP">Sheikhupura</option>
+        </select>
+      </div>
       <div id="surveyorList" class="item-list"><div class="empty">No surveyors added yet.</div></div>
+      <button class="secondary" id="btnExportSurveyors">⬇️ Export to Excel (uses district filter above)</button>
     </div>
   </section>
 
@@ -327,8 +367,35 @@
   <!-- USERS (admin only) -->
   <section id="tab-users">
     <div class="card">
-      <h2>Add / update a user's access</h2>
-      <p style="font-size:12px; color:var(--muted); margin-top:0;">Create the login first in the Firebase console (Authentication tab), copy their User UID from there, then assign their role here.</p>
+      <h2>Create new user (auto)</h2>
+      <p style="font-size:12px; color:var(--muted); margin-top:0;">Create a new login account and assign role in one step. No Firebase Console needed.</p>
+      <label>Email</label>
+      <input id="autoUserEmail" type="email" placeholder="e.g. bilal.kasur@spatio.local">
+      <label>Password (min 6 characters)</label>
+      <input id="autoUserPassword" type="password" placeholder="••••••••">
+      <label>Name (for your reference)</label>
+      <input id="autoUserName" placeholder="e.g. Bilal — Kasur Manager">
+      <label>Role</label>
+      <select id="autoUserRole">
+        <option value="manager">District Manager</option>
+        <option value="admin">Admin — full access to all districts</option>
+      </select>
+      <div id="autoUserDistrictWrap">
+        <label>Assigned district</label>
+        <select id="autoUserDistrict">
+          <option value="LHR">Lahore</option>
+          <option value="KSR">Kasur</option>
+          <option value="NKS">Nankana Sahib</option>
+          <option value="SKP">Sheikhupura</option>
+        </select>
+      </div>
+      <button class="primary" id="btnAutoCreateUser">Create User & Assign Role</button>
+      <div class="msg" id="autoUserMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Add / update by UID (manual)</h2>
+      <p style="font-size:12px; color:var(--muted); margin-top:0;">If a user already exists in Firebase Authentication, paste their UID here to assign or update their role.</p>
       <label>User UID (from Firebase Authentication console)</label>
       <input id="newUserUid" placeholder="e.g. a1B2c3D4e5F6...">
       <label>Name (for your reference)</label>
@@ -370,10 +437,31 @@
           <input id="histSurveyor" placeholder="name contains…">
         </div>
       </div>
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>District</label>
+          <select id="histDistrictFilter">
+            <option value="">All districts</option>
+            <option value="LHR">Lahore</option>
+            <option value="KSR">Kasur</option>
+            <option value="NKS">Nankana Sahib</option>
+            <option value="SKP">Sheikhupura</option>
+          </select>
+        </div>
+        <div>
+          <label>Status</label>
+          <select id="histStatusFilter">
+            <option value="">All</option>
+            <option value="out">Currently out</option>
+            <option value="closed">Returned</option>
+          </select>
+        </div>
+      </div>
     </div>
     <div class="card">
       <h2>Transaction log (most recent first)</h2>
       <div id="histList"><div class="empty">Loading…</div></div>
+      <button class="secondary" id="btnExportHistory" style="margin-top:14px;">⬇️ Export to Excel (uses filters above)</button>
     </div>
   </section>
 
@@ -520,9 +608,18 @@ db.ref("surveyors").on("value", snap=>{
 
 function renderSurveyorList(){
   const wrap = document.getElementById("surveyorList");
+  const search = (document.getElementById("surveyorSearch").value || "").toLowerCase();
+  const districtFilter = currentRole === "manager" ? currentDistrict : document.getElementById("surveyorDistrictFilter").value;
+
   let ids = Object.keys(surveyorsCache);
   if (currentRole === "manager") ids = ids.filter(id => surveyorsCache[id].district === currentDistrict);
-  if (ids.length === 0){ wrap.innerHTML = '<div class="empty">No surveyors added yet.</div>'; return; }
+  if (districtFilter) ids = ids.filter(id => surveyorsCache[id].district === districtFilter);
+  if (search) ids = ids.filter(id => {
+    const s = surveyorsCache[id];
+    return (s.name||"").toLowerCase().includes(search) || (s.cnic||"").includes(search) || (s.phone||"").includes(search);
+  });
+
+  if (ids.length === 0){ wrap.innerHTML = '<div class="empty">No surveyors match.</div>'; return; }
   wrap.innerHTML = "";
   ids.sort((a,b)=> surveyorsCache[a].name.localeCompare(surveyorsCache[b].name)).forEach(id=>{
     const s = surveyorsCache[id];
@@ -547,6 +644,35 @@ function renderSurveyorList(){
     });
   });
 }
+document.getElementById("surveyorSearch").addEventListener("input", renderSurveyorList);
+document.getElementById("surveyorDistrictFilter").addEventListener("change", renderSurveyorList);
+
+document.getElementById("btnExportSurveyors").addEventListener("click", ()=>{
+  const districtFilter = currentRole === "manager" ? currentDistrict : document.getElementById("surveyorDistrictFilter").value;
+  let ids = Object.keys(surveyorsCache);
+  if (currentRole === "manager") ids = ids.filter(id => surveyorsCache[id].district === currentDistrict);
+  if (districtFilter) ids = ids.filter(id => surveyorsCache[id].district === districtFilter);
+  if (ids.length === 0){ showMsg("surveyorMsg","No surveyors to export for this filter.", false); return; }
+
+  const rows = ids.sort((a,b)=> surveyorsCache[a].name.localeCompare(surveyorsCache[b].name)).map(id=>{
+    const s = surveyorsCache[id];
+    return {
+      "Name": s.name || "",
+      "District": districtName(s.district) || "",
+      "CNIC": s.cnic || "",
+      "Phone": s.phone || "",
+      "Date Added": s.addedDate ? new Date(s.addedDate).toLocaleDateString() : ""
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws["!cols"] = [{wch:22},{wch:14},{wch:16},{wch:14},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  const sheetLabel = districtFilter ? districtName(districtFilter) : "All Districts";
+  XLSX.utils.book_append_sheet(wb, ws, sheetLabel.slice(0,31));
+  const dateStr = new Date().toISOString().slice(0,10);
+  const fileLabel = districtFilter ? districtFilter : "all-districts";
+  XLSX.writeFile(wb, `surveyors-${fileLabel}-${dateStr}.xlsx`);
+});
 
 function renderOutSurveyorSelect(){
   const sel = document.getElementById("outSurveyor");
@@ -1054,15 +1180,21 @@ function renderHistItemFilter(){
 }
 document.getElementById("histItem").addEventListener("change", renderHistory);
 document.getElementById("histSurveyor").addEventListener("input", renderHistory);
+document.getElementById("histDistrictFilter").addEventListener("change", renderHistory);
+document.getElementById("histStatusFilter").addEventListener("change", renderHistory);
 
 function renderHistory(){
   const itemFilter = document.getElementById("histItem").value;
   const surveyorFilter = (document.getElementById("histSurveyor").value || "").toLowerCase();
+  const districtFilter = currentRole === "manager" ? currentDistrict : document.getElementById("histDistrictFilter").value;
+  const statusFilter = document.getElementById("histStatusFilter").value;
   const wrap = document.getElementById("histList");
   let rows = Object.entries(txCache);
   if (currentRole === "manager") rows = rows.filter(([,t]) => t.district === currentDistrict);
+  if (districtFilter) rows = rows.filter(([,t]) => t.district === districtFilter);
   if (itemFilter) rows = rows.filter(([,t]) => t.itemId === itemFilter);
   if (surveyorFilter) rows = rows.filter(([,t]) => (t.surveyor||"").toLowerCase().includes(surveyorFilter));
+  if (statusFilter) rows = rows.filter(([,t]) => t.status === statusFilter);
   rows.sort((a,b) => new Date(b[1].checkOutTime) - new Date(a[1].checkOutTime));
 
   if (rows.length === 0){ wrap.innerHTML = '<div class="empty">No transactions match.</div>'; return; }
@@ -1083,9 +1215,52 @@ function renderHistory(){
   });
 }
 
+document.getElementById("btnExportHistory").addEventListener("click", ()=>{
+  const districtFilter = currentRole === "manager" ? currentDistrict : document.getElementById("histDistrictFilter").value;
+  const statusFilter = document.getElementById("histStatusFilter").value;
+  const itemFilter = document.getElementById("histItem").value;
+  const surveyorFilter = (document.getElementById("histSurveyor").value || "").toLowerCase();
+
+  let rows = Object.entries(txCache);
+  if (currentRole === "manager") rows = rows.filter(([,t]) => t.district === currentDistrict);
+  if (districtFilter) rows = rows.filter(([,t]) => t.district === districtFilter);
+  if (itemFilter) rows = rows.filter(([,t]) => t.itemId === itemFilter);
+  if (surveyorFilter) rows = rows.filter(([,t]) => (t.surveyor||"").toLowerCase().includes(surveyorFilter));
+  if (statusFilter) rows = rows.filter(([,t]) => t.status === statusFilter);
+  rows.sort((a,b) => new Date(b[1].checkOutTime) - new Date(a[1].checkOutTime));
+
+  if (rows.length === 0){ alert("No transactions match the current filters."); return; }
+
+  const outRows = rows.map(([txId, t])=>({
+    "Transaction ID": txId,
+    "Item ID": t.itemId || "",
+    "Surveyor": t.surveyor || "",
+    "District": districtName(t.district) || "",
+    "Custody Type": t.custodyType || "daily",
+    "Expected Return": t.expectedReturn || "",
+    "Check Out Time": t.checkOutTime ? new Date(t.checkOutTime).toLocaleString() : "",
+    "Check In Time": t.checkInTime ? new Date(t.checkInTime).toLocaleString() : "still out",
+    "Condition": t.condition || "",
+    "Notes Out": t.notesOut || "",
+    "Notes In": t.notesIn || "",
+    "Status": t.status || ""
+  }));
+  const ws = XLSX.utils.json_to_sheet(outRows);
+  ws["!cols"] = [{wch:24},{wch:14},{wch:16},{wch:14},{wch:12},{wch:14},{wch:20},{wch:20},{wch:12},{wch:24},{wch:24},{wch:10}];
+  const wb = XLSX.utils.book_new();
+  const sheetLabel = districtFilter ? districtName(districtFilter) : "All Districts";
+  XLSX.utils.book_append_sheet(wb, ws, sheetLabel.slice(0,31));
+  const dateStr = new Date().toISOString().slice(0,10);
+  const fileLabel = districtFilter ? districtFilter : "all-districts";
+  XLSX.writeFile(wb, `history-${fileLabel}-${dateStr}.xlsx`);
+});
+
 // ---------- USER ROLES (admin only) ----------
 document.getElementById("newUserRole").addEventListener("change", (e)=>{
   document.getElementById("newUserDistrictWrap").style.display = e.target.value === "admin" ? "none" : "block";
+});
+document.getElementById("autoUserRole").addEventListener("change", (e)=>{
+  document.getElementById("autoUserDistrictWrap").style.display = e.target.value === "admin" ? "none" : "block";
 });
 
 if (currentRole === "admin"){
@@ -1114,6 +1289,7 @@ if (currentRole === "admin"){
     });
   });
 
+  // Manual UID assignment
   document.getElementById("btnAddUser").addEventListener("click", ()=>{
     const uid = document.getElementById("newUserUid").value.trim();
     const name = document.getElementById("newUserName").value.trim();
@@ -1129,6 +1305,47 @@ if (currentRole === "admin"){
       document.getElementById("newUserUid").value = "";
       document.getElementById("newUserName").value = "";
     }).catch(e=>showMsg("userMsg","Error: "+e.message, false));
+  });
+
+  // Auto-create user via REST API
+  document.getElementById("btnAutoCreateUser").addEventListener("click", async ()=>{
+    const email = document.getElementById("autoUserEmail").value.trim();
+    const password = document.getElementById("autoUserPassword").value;
+    const name = document.getElementById("autoUserName").value.trim();
+    const role = document.getElementById("autoUserRole").value;
+    const district = document.getElementById("autoUserDistrict").value;
+
+    if (!email || !password){ showMsg("autoUserMsg","Enter email and password.", false); return; }
+    if (password.length < 6){ showMsg("autoUserMsg","Password must be at least 6 characters.", false); return; }
+    if (!name){ showMsg("autoUserMsg","Enter a name for your reference.", false); return; }
+
+    const btn = document.getElementById("btnAutoCreateUser");
+    btn.disabled = true; btn.textContent = "Creating…";
+
+    try {
+      const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, returnSecureToken: false })
+      });
+      const data = await res.json();
+      if (data.error){
+        throw new Error(data.error.message);
+      }
+      const newUid = data.localId;
+      await db.ref("roles/"+newUid).set({
+        name, role,
+        district: role === "manager" ? district : null
+      });
+      showMsg("autoUserMsg", `User created: ${email} · UID: ${newUid.slice(0,12)}… · Role: ${role}`, true);
+      document.getElementById("autoUserEmail").value = "";
+      document.getElementById("autoUserPassword").value = "";
+      document.getElementById("autoUserName").value = "";
+    } catch(err){
+      showMsg("autoUserMsg", "Error: " + err.message, false);
+    } finally {
+      btn.disabled = false; btn.textContent = "Create User & Assign Role";
+    }
   });
 }
 
