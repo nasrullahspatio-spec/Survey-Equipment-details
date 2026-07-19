@@ -113,6 +113,7 @@
     #qr-print{flex-wrap:wrap; gap:12px;}
   }
 </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -127,6 +128,14 @@
     <div class="msg" id="loginMsg"></div>
   </div>
 </div>
+
+<div id="loadingScreen" style="min-height:100vh; display:none; align-items:center; justify-content:center; padding:20px; flex-direction:column; gap:12px;">
+  <div style="width:40px;height:40px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;"></div>
+  <div style="font-size:13px; color:var(--muted);">Checking access…</div>
+  <style>@keyframes spin{to{transform:rotate(360deg);}}</style>
+</div>
+
+
 
 <div id="appRoot" style="display:none;">
 
@@ -308,6 +317,10 @@
     <div class="card">
       <h2>No access assigned yet</h2>
       <p style="font-size:14px; color:var(--muted);">Your login works, but no role has been assigned to your account yet. Contact the divisional admin to get access.</p>
+      <div style="margin-top:14px; padding:10px 12px; background:var(--panel-2); border-radius:8px; border:1px solid var(--line);">
+        <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">Your User UID (copy this for the admin):</div>
+        <div id="noAccessUid" style="font-size:13px; font-family:monospace; color:var(--text); word-break:break-all;">—</div>
+      </div>
     </div>
   </section>
 
@@ -388,21 +401,31 @@ let currentUid = null;
 let currentRole = null; // "admin" or "manager"
 let currentDistrict = null; // e.g. "LHR", null for admin
 
+function showScreen(name){
+  // name: "login" | "loading" | "app" | "noaccess"
+  document.getElementById("loginScreen").style.display = name === "login" ? "flex" : "none";
+  document.getElementById("loadingScreen").style.display = name === "loading" ? "flex" : "none";
+  document.getElementById("appRoot").style.display = name === "app" ? "block" : "none";
+}
+
 auth.onAuthStateChanged(user => {
   if (user){
-    document.getElementById("loginScreen").style.display = "none";
-    document.getElementById("appRoot").style.display = "block";
+    showScreen("loading");
     currentUid = user.uid;
     db.ref("roles/"+user.uid).once("value").then(snap=>{
       const role = snap.val();
       if (!role){
         // logged in, but no access assigned
+        showScreen("app");
         document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
         document.querySelectorAll("main section").forEach(s=>s.classList.remove("active"));
         document.getElementById("tab-noaccess").style.display = "block";
         document.getElementById("tab-noaccess").classList.add("active");
         document.querySelectorAll("nav button").forEach(b => b.style.display = "none");
         document.getElementById("roleTag").textContent = "no access assigned";
+        // Show UID for debugging
+        const uidEl = document.getElementById("noAccessUid");
+        if (uidEl) uidEl.textContent = user.uid;
         return;
       }
       currentRole = role.role;
@@ -413,14 +436,17 @@ auth.onAuthStateChanged(user => {
       if (currentRole === "admin"){
         document.getElementById("navUsers").style.display = "";
       }
+      showScreen("app");
       if (!appInitialized){
         appInitialized = true;
         initApp();
       }
+    }).catch(err=>{
+      console.error("Role check failed:", err);
+      showScreen("login");
     });
   } else {
-    document.getElementById("loginScreen").style.display = "flex";
-    document.getElementById("appRoot").style.display = "none";
+    showScreen("login");
   }
 });
 
