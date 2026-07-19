@@ -113,16 +113,60 @@
     #qr-print{flex-wrap:wrap; gap:12px;}
   }
 
-  /* DGPS Road Loader */
-  .dgps-loader{position:relative;width:200px;height:60px;overflow:hidden;}
-  .road{position:absolute;bottom:8px;left:0;right:0;height:2px;background:var(--line);border-radius:1px;}
-  .road-lines{position:absolute;bottom:8px;left:0;right:0;height:2px;background:repeating-linear-gradient(90deg, var(--accent) 0px, var(--accent) 16px, transparent 16px, transparent 32px);animation:roadScroll 0.8s linear infinite;border-radius:1px;}
-  .rover-wrap{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);animation:roverBounce 1.2s ease-in-out infinite;}
-  .rover{filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));}
-  .blink{animation:blink 1s ease-in-out infinite;}
-  @keyframes roadScroll{from{transform:translateX(0);}to{transform:translateX(-32px);}}
-  @keyframes roverBounce{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-6px);}}
-  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+  /* Realistic Survey Equipment Loader */
+  .survey-loader{position:relative;}
+  .survey-svg{filter:drop-shadow(0 8px 24px rgba(0,0,0,0.5));}
+
+  /* Pole sways gently like a surveyor holding it */
+  .survey-svg{animation:poleSway 3s ease-in-out infinite;transform-origin:bottom center;}
+  @keyframes poleSway{0%,100%{transform:rotate(-0.8deg);}50%{transform:rotate(0.8deg);}}
+
+  /* Receiver dome pulses */
+  .receiver-dome{animation:domePulse 2s ease-in-out infinite;}
+  @keyframes domePulse{0%,100%{filter:brightness(1);}50%{filter:brightness(1.15);}}
+
+  /* LEDs blink in sequence */
+  .led-green{animation:ledBlink 1.5s ease-in-out infinite;}
+  .led-yellow{animation:ledBlink 1.5s ease-in-out 0.5s infinite;}
+  .led-red{animation:ledBlink 1.5s ease-in-out 1s infinite;}
+  @keyframes ledBlink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+
+  /* Data collector screen glows */
+  .data-collector{animation:screenGlow 2.5s ease-in-out infinite;}
+  @keyframes screenGlow{0%,100%{filter:drop-shadow(0 0 2px rgba(95,191,119,0.2));}50%{filter:drop-shadow(0 0 6px rgba(95,191,119,0.5));}}
+
+  .screen-sat{animation:satRotate 3s linear infinite;transform-origin:100px 158px;}
+  @keyframes satRotate{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+  .screen-dot{animation:dotPulse 1.2s ease-in-out infinite;}
+  @keyframes dotPulse{0%,100%{opacity:1;r:2;}50%{opacity:0.5;r:2.8;}}
+
+  /* Satellite signals wave outward */
+  .sig-wave:nth-child(1){animation:sigWave 2s ease-out 0s infinite;}
+  .sig-wave:nth-child(2){animation:sigWave 2s ease-out 0.5s infinite;}
+  .sig-wave:nth-child(3){animation:sigWave 2s ease-out 1s infinite;}
+  .sig-wave:nth-child(4){animation:sigWave 2s ease-out 1.5s infinite;}
+  @keyframes sigWave{0%{opacity:0.8;stroke-width:1.5;}100%{opacity:0;stroke-width:0.3;}}
+
+  .sat-blink:nth-child(5){animation:satBlink 2s ease-in-out 0s infinite;}
+  .sat-blink:nth-child(6){animation:satBlink 2s ease-in-out 0.5s infinite;}
+  .sat-blink:nth-child(7){animation:satBlink 2s ease-in-out 1s infinite;}
+  .sat-blink:nth-child(8){animation:satBlink 2s ease-in-out 1.5s infinite;}
+  @keyframes satBlink{0%,100%{opacity:0.8;}50%{opacity:0.2;}}
+
+  /* Tip ping effect */
+  .tip-ping{animation:tipPing 1.8s ease-out infinite;}
+  @keyframes tipPing{0%{opacity:1;r:2;}100%{opacity:0;r:6;}}
+  .tip-glow{animation:tipGlow 1.8s ease-out infinite;}
+  @keyframes tipGlow{0%{opacity:0.6;rx:18;}100%{opacity:0;rx:30;}}
+
+  /* Loading text */
+  .loading-text{font-size:13px; color:var(--muted); letter-spacing:3px; text-transform:uppercase; font-weight:600;}
+  .loading-dots{display:flex; gap:6px; margin-top:-8px;}
+  .loading-dots span{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:0.4;animation:dotBounce 1.4s ease-in-out infinite;}
+  .loading-dots span:nth-child(2){animation-delay:0.2s;}
+  .loading-dots span:nth-child(3){animation-delay:0.4s;}
+  @keyframes dotBounce{0%,100%{opacity:0.4;transform:translateY(0);}50%{opacity:1;transform:translateY(-6px);}}
 </style>
 <base target="_blank">
 </head>
@@ -140,33 +184,95 @@
   </div>
 </div>
 
-<div id="loadingScreen" style="min-height:100vh; display:none; align-items:center; justify-content:center; padding:20px; flex-direction:column; gap:16px;">
-  <div class="dgps-loader">
-    <div class="road">
-      <div class="road-lines"></div>
-    </div>
-    <div class="rover-wrap">
-      <svg class="rover" viewBox="0 0 48 48" width="40" height="40" fill="none">
-        <!-- Tripod legs -->
-        <line x1="24" y1="44" x2="12" y2="36" stroke="#9fb0ac" stroke-width="2" stroke-linecap="round"/>
-        <line x1="24" y1="44" x2="36" y2="36" stroke="#9fb0ac" stroke-width="2" stroke-linecap="round"/>
-        <line x1="24" y1="44" x2="24" y2="20" stroke="#9fb0ac" stroke-width="2" stroke-linecap="round"/>
-        <!-- Receiver box -->
-        <rect x="18" y="14" width="12" height="8" rx="2" fill="var(--accent)"/>
-        <!-- Antenna -->
-        <line x1="24" y1="14" x2="24" y2="6" stroke="#eef2ef" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="24" cy="4" r="2.5" fill="var(--good)"/>
-        <!-- Blink dot -->
-        <circle cx="28" cy="18" r="1.5" fill="var(--good)" class="blink"/>
-      </svg>
-    </div>
+<div id="loadingScreen" style="min-height:100vh; display:none; align-items:center; justify-content:center; padding:20px; flex-direction:column; gap:20px;">
+  <div class="survey-loader">
+    <svg viewBox="0 0 200 340" width="160" height="272" fill="none" class="survey-svg">
+      <!-- Glow under pole tip -->
+      <ellipse cx="100" cy="325" rx="18" ry="4" fill="var(--bad)" opacity="0.4" class="tip-glow"/>
+      <!-- Pole shadow -->
+      <ellipse cx="100" cy="328" rx="28" ry="5" fill="#000" opacity="0.3"/>
+
+      <!-- Carbon fiber pole -->
+      <rect x="96" y="110" width="8" height="210" rx="2" fill="url(#poleGrad)"/>
+      <!-- Pole segments -->
+      <line x1="96" y1="160" x2="104" y2="160" stroke="#1a1a1a" stroke-width="0.8" opacity="0.6"/>
+      <line x1="96" y1="210" x2="104" y2="210" stroke="#1a1a1a" stroke-width="0.8" opacity="0.6"/>
+      <line x1="96" y1="260" x2="104" y2="260" stroke="#1a1a1a" stroke-width="0.8" opacity="0.6"/>
+
+      <!-- Pole tip / spike -->
+      <path d="M98 320 L100 332 L102 320 Z" fill="#c0392b"/>
+      <circle cx="100" cy="332" r="2" fill="#e74c3c" class="tip-ping"/>
+
+      <!-- Data collector clamp -->
+      <rect x="90" y="185" width="20" height="8" rx="2" fill="#444"/>
+
+      <!-- Data collector / tablet -->
+      <g class="data-collector">
+        <rect x="78" y="140" width="44" height="58" rx="5" fill="#1e3a5f" stroke="#2c5282" stroke-width="1.5"/>
+        <rect x="82" y="144" width="36" height="42" rx="2" fill="#0d1b2a"/>
+        <!-- Screen content -->
+        <circle cx="100" cy="158" r="8" stroke="var(--good)" stroke-width="1.5" fill="none" class="screen-sat"/>
+        <circle cx="100" cy="158" r="2" fill="var(--good)" class="screen-dot"/>
+        <line x1="88" y1="172" x2="112" y2="172" stroke="#2c5282" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="88" y1="178" x2="108" y2="178" stroke="#2c5282" stroke-width="1.5" stroke-linecap="round"/>
+        <!-- Home button -->
+        <circle cx="100" cy="192" r="3" fill="#333" stroke="#555" stroke-width="0.5"/>
+      </g>
+
+      <!-- Receiver mount / adapter -->
+      <rect x="92" y="100" width="16" height="12" rx="2" fill="#333"/>
+      <rect x="94" y="96" width="12" height="6" rx="1" fill="#222"/>
+
+      <!-- GNSS Receiver Dome -->
+      <g class="receiver-dome">
+        <!-- Main dome body -->
+        <path d="M70 96 Q70 52 100 52 Q130 52 130 96 Z" fill="url(#domeGrad)"/>
+        <!-- Dome highlight -->
+        <ellipse cx="88" cy="68" rx="10" ry="6" fill="#fff" opacity="0.15" transform="rotate(-20 88 68)"/>
+        <!-- Trimble-style ring -->
+        <rect x="68" y="92" width="64" height="6" rx="2" fill="#1a1a1a"/>
+        <rect x="70" y="93" width="60" height="2" rx="1" fill="#333"/>
+        <!-- LED indicators -->
+        <circle cx="85" cy="88" r="2.5" fill="var(--good)" class="led-green"/>
+        <circle cx="100" cy="88" r="2.5" fill="var(--warn)" class="led-yellow"/>
+        <circle cx="115" cy="88" r="2.5" fill="var(--bad)" class="led-red"/>
+        <!-- Top cap -->
+        <ellipse cx="100" cy="52" rx="14" ry="4" fill="#f39c12"/>
+        <ellipse cx="100" cy="50" rx="10" ry="2.5" fill="#f1c40f"/>
+      </g>
+
+      <!-- Satellite signals -->
+      <g class="sat-signals">
+        <path d="M60 45 Q45 30 55 15" stroke="var(--good)" stroke-width="1" fill="none" opacity="0" class="sig-wave"/>
+        <path d="M140 45 Q155 30 145 15" stroke="var(--good)" stroke-width="1" fill="none" opacity="0" class="sig-wave"/>
+        <path d="M75 40 Q60 20 70 5" stroke="var(--good)" stroke-width="1" fill="none" opacity="0" class="sig-wave"/>
+        <path d="M125 40 Q140 20 130 5" stroke="var(--good)" stroke-width="1" fill="none" opacity="0" class="sig-wave"/>
+        <circle cx="55" cy="12" r="1.5" fill="var(--good)" opacity="0" class="sat-blink"/>
+        <circle cx="145" cy="12" r="1.5" fill="var(--good)" opacity="0" class="sat-blink"/>
+        <circle cx="70" cy="3" r="1.5" fill="var(--good)" opacity="0" class="sat-blink"/>
+        <circle cx="130" cy="3" r="1.5" fill="var(--good)" opacity="0" class="sat-blink"/>
+      </g>
+
+      <!-- Gradients -->
+      <defs>
+        <linearGradient id="domeGrad" x1="100" y1="52" x2="100" y2="96" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#f39c12"/>
+          <stop offset="40%" stop-color="#e67e22"/>
+          <stop offset="100%" stop-color="#d35400"/>
+        </linearGradient>
+        <linearGradient id="poleGrad" x1="96" y1="110" x2="104" y2="110" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#2c2c2c"/>
+          <stop offset="30%" stop-color="#4a4a4a"/>
+          <stop offset="50%" stop-color="#555"/>
+          <stop offset="70%" stop-color="#4a4a4a"/>
+          <stop offset="100%" stop-color="#2c2c2c"/>
+        </linearGradient>
+      </defs>
+    </svg>
   </div>
-  <div style="font-size:13px; color:var(--muted);">Checking access…</div>
-</div>
-
-
-
-<div id="appRoot" style="display:none;">
+  <div class="loading-text">SURVEYING LAND DATA</div>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+</div><div id="appRoot" style="display:none;">
 
 <header>
   <h1>Equipment Tracker — Lahore Division</h1>
