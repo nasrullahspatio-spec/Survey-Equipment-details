@@ -264,7 +264,7 @@
         </select>
       </div>
       <div id="itemMaster" class="item-list"><div class="empty">Loading…</div></div>
-      <button class="secondary" id="btnExportExcel">⬇️ Export item list to Excel</button>
+      <button class="secondary" id="btnExportExcel">⬇️ Export to Excel (uses district filter above)</button>
     </div>
 
     <div class="card">
@@ -736,13 +736,15 @@ document.getElementById("btnBuildPrint").addEventListener("click", ()=>{
 document.getElementById("btnPrintQr").addEventListener("click", ()=>window.print());
 
 document.getElementById("btnExportExcel").addEventListener("click", ()=>{
-  const ids = Object.keys(itemsCache).sort();
-  if (ids.length === 0){ showMsg("addMsg","No items to export yet.", false); return; }
+  const districtFilter = currentRole === "manager" ? currentDistrict : document.getElementById("itemDistrictFilter").value;
+  let ids = Object.keys(itemsCache).sort();
+  if (districtFilter) ids = ids.filter(id => itemsCache[id].district === districtFilter);
+  if (ids.length === 0){ showMsg("addMsg","No items to export for this district yet.", false); return; }
   const rows = ids.map(id=>{
     const it = itemsCache[id];
     return {
       "Item ID": id,
-      "District": it.district || "",
+      "District": districtName(it.district) || "",
       "Type": it.type || "",
       "Serial Number": it.serial || "",
       "Status": it.status || "In office",
@@ -751,11 +753,13 @@ document.getElementById("btnExportExcel").addEventListener("click", ()=>{
     };
   });
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [{wch:16},{wch:10},{wch:10},{wch:16},{wch:14},{wch:16},{wch:14}];
+  ws["!cols"] = [{wch:16},{wch:14},{wch:10},{wch:16},{wch:14},{wch:16},{wch:14}];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Items");
+  const sheetLabel = districtFilter ? districtName(districtFilter) : "All Districts";
+  XLSX.utils.book_append_sheet(wb, ws, sheetLabel.slice(0,31));
   const dateStr = new Date().toISOString().slice(0,10);
-  XLSX.writeFile(wb, `equipment-items-${dateStr}.xlsx`);
+  const fileLabel = districtFilter ? districtFilter : "all-districts";
+  XLSX.writeFile(wb, `equipment-items-${fileLabel}-${dateStr}.xlsx`);
 });
 
 // ---------- CHECK OUT ----------
