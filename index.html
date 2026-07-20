@@ -386,14 +386,14 @@
         <div>
           <label>Type</label>
           <select id="newType">
-            <option>DGPS</option>
-            <option>ROD</option>
-            <option value="BOX-DGPS">BOX-DGPS (Yellow/Original)</option>
-            <option value="BAG-DGPS">BAG-DGPS (Company/Soft)</option>
-            <option>BAG-ROD</option>
-            <option>CHARGER</option>
-            <option>BATTERY</option>
-            <option>OTHER</option>
+            <option value="DGPS">DGPS</option>
+            <option value="ROD">ROD</option>
+            <option value="BOX-DGPS">BOX-DGPS</option>
+            <option value="BAG-DGPS">BAG-DGPS</option>
+            <option value="BAG-ROD">BAG-ROD</option>
+            <option value="CHARGER">CHARGER</option>
+            <option value="BATTERY">BATTERY</option>
+            <option value="OTHER">OTHER</option>
           </select>
           <div id="manufacturerWrap" style="display:none;">
             <label>Manufacturer / Company</label>
@@ -987,6 +987,7 @@ function renderItemMaster(){
       }
       db.ref("items/"+id).update(updates).then(()=>{
         editingId = null;
+        renderItemMaster();
       }).catch(e=>alert("Error saving: "+e.message));
     });
   });
