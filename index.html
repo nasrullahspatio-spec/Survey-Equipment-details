@@ -275,7 +275,7 @@
 </div><div id="appRoot" style="display:none;">
 
 <header>
-  <h1>Equipment Tracker — Lahore Division</h1>
+  <h1>Spatio Equipment Tracker</h1>
   <div style="font-size:11px; color:var(--muted);" id="roleTag"></div>
   <div style="display:flex; align-items:center; gap:12px;">
     <div class="status"><span class="dot" id="connDot"></span><span id="connText">connecting…</span></div>
@@ -373,6 +373,14 @@
             <option value="KSR">Kasur</option>
             <option value="NKS">Nankana Sahib</option>
             <option value="SKP">Sheikhupura</option>
+            <option value="GJT">Gujrat</option>
+            <option value="MBD">Mandi Bahauddin</option>
+            <option value="HFD">Hafizabad</option>
+            <option value="WZD">Wazirabad</option>
+            <option value="SGD">Sargodha</option>
+            <option value="KSB">Khushab</option>
+            <option value="MWL">Mianwali</option>
+            <option value="BKR">Bhakkar</option>
           </select>
         </div>
         <div>
@@ -410,6 +418,14 @@
           <option value="KSR">Kasur</option>
           <option value="NKS">Nankana Sahib</option>
           <option value="SKP">Sheikhupura</option>
+          <option value="GJT">Gujrat</option>
+          <option value="MBD">Mandi Bahauddin</option>
+          <option value="HFD">Hafizabad</option>
+          <option value="WZD">Wazirabad</option>
+          <option value="SGD">Sargodha</option>
+          <option value="KSB">Khushab</option>
+          <option value="MWL">Mianwali</option>
+          <option value="BKR">Bhakkar</option>
         </select>
       </div>
       <div id="itemMaster" class="item-list"><div class="empty">Loading…</div></div>
@@ -438,6 +454,14 @@
         <option value="KSR">Kasur</option>
         <option value="NKS">Nankana Sahib</option>
         <option value="SKP">Sheikhupura</option>
+        <option value="GJT">Gujrat</option>
+        <option value="MBD">Mandi Bahauddin</option>
+        <option value="HFD">Hafizabad</option>
+        <option value="WZD">Wazirabad</option>
+        <option value="SGD">Sargodha</option>
+        <option value="KSB">Khushab</option>
+        <option value="MWL">Mianwali</option>
+        <option value="BKR">Bhakkar</option>
       </select>
       <label>CNIC</label>
       <input id="newSurveyorCnic" placeholder="e.g. 35202-1234567-1" maxlength="15">
@@ -456,6 +480,14 @@
           <option value="KSR">Kasur</option>
           <option value="NKS">Nankana Sahib</option>
           <option value="SKP">Sheikhupura</option>
+          <option value="GJT">Gujrat</option>
+          <option value="MBD">Mandi Bahauddin</option>
+          <option value="HFD">Hafizabad</option>
+          <option value="WZD">Wazirabad</option>
+          <option value="SGD">Sargodha</option>
+          <option value="KSB">Khushab</option>
+          <option value="MWL">Mianwali</option>
+          <option value="BKR">Bhakkar</option>
         </select>
       </div>
       <div id="surveyorList" class="item-list"><div class="empty">No surveyors added yet.</div></div>
@@ -498,6 +530,14 @@
           <option value="KSR">Kasur</option>
           <option value="NKS">Nankana Sahib</option>
           <option value="SKP">Sheikhupura</option>
+          <option value="GJT">Gujrat</option>
+          <option value="MBD">Mandi Bahauddin</option>
+          <option value="HFD">Hafizabad</option>
+          <option value="WZD">Wazirabad</option>
+          <option value="SGD">Sargodha</option>
+          <option value="KSB">Khushab</option>
+          <option value="MWL">Mianwali</option>
+          <option value="BKR">Bhakkar</option>
         </select>
       </div>
       <button class="primary" id="btnAutoCreateUser">Create User & Assign Role</button>
@@ -523,6 +563,14 @@
           <option value="KSR">Kasur</option>
           <option value="NKS">Nankana Sahib</option>
           <option value="SKP">Sheikhupura</option>
+          <option value="GJT">Gujrat</option>
+          <option value="MBD">Mandi Bahauddin</option>
+          <option value="HFD">Hafizabad</option>
+          <option value="WZD">Wazirabad</option>
+          <option value="SGD">Sargodha</option>
+          <option value="KSB">Khushab</option>
+          <option value="MWL">Mianwali</option>
+          <option value="BKR">Bhakkar</option>
         </select>
       </div>
       <button class="primary" id="btnAddUser">Save Access</button>
@@ -557,6 +605,14 @@
             <option value="KSR">Kasur</option>
             <option value="NKS">Nankana Sahib</option>
             <option value="SKP">Sheikhupura</option>
+            <option value="GJT">Gujrat</option>
+            <option value="MBD">Mandi Bahauddin</option>
+            <option value="HFD">Hafizabad</option>
+            <option value="WZD">Wazirabad</option>
+            <option value="SGD">Sargodha</option>
+            <option value="KSB">Khushab</option>
+            <option value="MWL">Mianwali</option>
+            <option value="BKR">Bhakkar</option>
           </select>
         </div>
         <div>
@@ -650,7 +706,11 @@ auth.onAuthStateChanged(user => {
 });
 
 function districtName(code){
-  const names = { LHR: "Lahore", KSR: "Kasur", NKS: "Nankana Sahib", SKP: "Sheikhupura" };
+  const names = {
+    LHR: "Lahore", KSR: "Kasur", NKS: "Nankana Sahib", SKP: "Sheikhupura",
+    GJT: "Gujrat", MBD: "Mandi Bahauddin", HFD: "Hafizabad", WZD: "Wazirabad",
+    SGD: "Sargodha", KSB: "Khushab", MWL: "Mianwali", BKR: "Bhakkar"
+  };
   return names[code] || code;
 }
 
@@ -676,10 +736,9 @@ document.getElementById("btnLogout").addEventListener("click", ()=>{
 function initApp(){
 
 if (currentRole === "manager"){
-  ["newDistrict","itemDistrictFilter","newSurveyorDistrict"].forEach(id=>{
+  ["newDistrict","itemDistrictFilter","newSurveyorDistrict","autoUserDistrict","newUserDistrict"].forEach(id=>{
     const el = document.getElementById(id);
-    el.value = currentDistrict;
-    el.disabled = true;
+    if (el) { el.value = currentDistrict; el.disabled = true; }
   });
 }
 
