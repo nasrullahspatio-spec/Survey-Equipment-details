@@ -387,6 +387,394 @@
           <select id="newType">
             <option>DGPS</option>
             <option>ROD</option>
+            <option value="BOX-DGPS">BOX-DGPS (Yellow/Original)</option>
+            <option value="BAG-DGPS">BAG-DGPS (Company/Soft)</option>
+            <option>BAG-ROD</option>
+            <option>CHARGER</option>
+            <option>BATTERY</option>
+            <option>OTHER</option>
+          </select>
+          <div id="manufacturerWrap" style="display:none;">
+            <label>Manufacturer / Company</label>
+            <input id="newManufacturer" placeholder="e.g. Trimble, Leica, CHC, South">
+          </div>
+          <div id="descriptionWrap" style="display:none;">
+            <label>Description</label>
+            <input id="newDescription" placeholder="e.g. tripod, prism, range pole">
+          </div>
+        </div>
+      </div>
+      <label>Number (auto if blank)</label>
+      <input id="newNumber" placeholder="e.g. 01">
+      <label>Serial number (optional)</label>
+      <input id="newSerial" placeholder="manufacturer serial no.">
+      <button class="primary" id="btnAddItem">Add Item + Generate QR</button>
+      <div class="msg" id="addMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>All items</h2>
+      <div class="row">
+        <input class="searchbar" id="itemSearch" placeholder="search by ID, type, or serial number…" style="margin-bottom:0;">
+        <select id="itemDistrictFilter" style="max-width:150px;">
+          <option value="">All districts</option>
+          <option value="LHR">Lahore</option>
+          <option value="KSR">Kasur</option>
+          <option value="NKS">Nankana Sahib</option>
+          <option value="SKP">Sheikhupura</option>
+          <opt    position:sticky; top:0; background:var(--bg); z-index:20;
+  }
+  header h1{font-size:17px; margin:0; letter-spacing:.3px;}
+  header .status{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px;}
+  .dot{width:8px;height:8px;border-radius:50%; background:var(--bad);}
+  .dot.on{background:var(--good);}
+  nav{
+    display:flex; gap:6px; padding:10px 12px; overflow-x:auto;
+    border-bottom:1px solid var(--line); position:sticky; top:53px; background:var(--bg); z-index:19;
+  }
+  nav button{
+    flex:0 0 auto; padding:9px 14px; border-radius:999px; border:1px solid var(--line);
+    background:var(--panel); color:var(--muted); font-size:13px; font-weight:600; cursor:pointer;
+  }
+  nav button.active{ background:var(--accent); color:#231a00; border-color:var(--accent);}
+  main{padding:16px; max-width:720px; margin:0 auto;}
+  section{display:none;}
+  section.active{display:block;}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px; margin-bottom:14px;
+  }
+  .card h2{font-size:14px; margin:0 0 12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px;}
+  label{display:block; font-size:12px; color:var(--muted); margin:10px 0 4px;}
+  select, input, textarea{
+    width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--text); font-size:15px;
+  }
+  input:focus, select:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .row{display:flex; gap:10px;}
+  .row > *{flex:1;}
+  button.primary{
+    margin-top:16px; width:100%; padding:14px; border:none; border-radius:8px;
+    background:var(--accent); color:#231a00; font-weight:700; font-size:15px; cursor:pointer;
+  }
+  button.primary:disabled{background:var(--accent-dim); color:#7d7160; cursor:not-allowed;}
+  button.secondary{
+    margin-top:10px; width:100%; padding:12px; border-radius:8px; cursor:pointer;
+    background:transparent; border:1px solid var(--line); color:var(--text); font-size:14px;
+  }
+  .msg{margin-top:10px; font-size:13px; padding:10px 12px; border-radius:8px; display:none;}
+  .msg.show{display:block;}
+  .msg.ok{background:#123320; color:var(--good); border:1px solid #1e5c34;}
+  .msg.err{background:#3a1614; color:#ff8f85; border:1px solid #6b2019;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th, td{padding:8px 6px; text-align:left; border-bottom:1px solid var(--line);}
+  th{color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase;}
+  .badge{padding:3px 8px; border-radius:999px; font-size:11px; font-weight:700;}
+  .badge.office{background:#123320; color:var(--good);}
+  .badge.out{background:#3a2e12; color:var(--warn);}
+  .badge.repair{background:#3a1614; color:var(--bad);}
+  .item-list{display:flex; flex-direction:column; gap:8px;}
+  .item-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 12px; background:var(--panel-2); border-radius:8px; border:1px solid var(--line);
+    cursor:pointer;
+  }
+  .item-row.selected{border-color:var(--accent);}
+  .item-row .id{font-weight:700; font-size:14px;}
+  .item-row .meta{font-size:11px; color:var(--muted);}
+  #qr-reader{border-radius:8px; overflow:hidden; margin-top:10px;}
+  #qr-print{display:flex; flex-wrap:wrap; gap:12px; margin-top:14px;}
+  .qr-tile{
+    background:#fff; color:#000; border-radius:8px; padding:10px; text-align:center;
+    width:130px; font-size:12px; font-weight:700;
+  }
+  .qr-tile div.qrbox{margin:0 auto 6px;}
+  .empty{color:var(--muted); font-size:13px; text-align:center; padding:20px 0;}
+  .searchbar{margin-bottom:10px;}
+  .history-item{padding:10px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .history-item .top{display:flex; justify-content:space-between; font-weight:600;}
+  .history-item .sub{color:var(--muted); font-size:12px; margin-top:2px;}
+  @media print{
+    body *{display:none !important;}
+    body{background:#fff; color:#000;}
+    #qr-print, #qr-print *{display:flex !important;}
+    #qr-print{flex-wrap:wrap; gap:12px;}
+  }
+
+  /* Realistic Survey Equipment Loader */
+  .survey-loader{position:relative;}
+  .survey-svg{filter:drop-shadow(0 8px 24px rgba(0,0,0,0.5));}
+
+  /* Pole sways gently like a surveyor holding it */
+  .survey-svg{animation:poleSway 3s ease-in-out infinite;transform-origin:bottom center;}
+  @keyframes poleSway{0%,100%{transform:rotate(-0.8deg);}50%{transform:rotate(0.8deg);}}
+
+  /* Receiver dome pulses */
+  .receiver-dome{animation:domePulse 2s ease-in-out infinite;}
+  @keyframes domePulse{0%,100%{filter:brightness(1);}50%{filter:brightness(1.15);}}
+
+  /* LEDs blink in sequence */
+  .led-green{animation:ledBlink 1.5s ease-in-out infinite;}
+  .led-yellow{animation:ledBlink 1.5s ease-in-out 0.5s infinite;}
+  .led-red{animation:ledBlink 1.5s ease-in-out 1s infinite;}
+  @keyframes ledBlink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+
+  /* Data collector screen glows */
+  .data-collector{animation:screenGlow 2.5s ease-in-out infinite;}
+  @keyframes screenGlow{0%,100%{filter:drop-shadow(0 0 2px rgba(95,191,119,0.2));}50%{filter:drop-shadow(0 0 6px rgba(95,191,119,0.5));}}
+
+  .screen-sat{animation:satRotate 3s linear infinite;transform-origin:100px 158px;}
+  @keyframes satRotate{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+  .screen-dot{animation:dotPulse 1.2s ease-in-out infinite;}
+  @keyframes dotPulse{0%,100%{opacity:1;r:2;}50%{opacity:0.5;r:2.8;}}
+
+  /* Satellite signals wave outward */
+  .sig-wave:nth-child(1){animation:sigWave 2s ease-out 0s infinite;}
+  .sig-wave:nth-child(2){animation:sigWave 2s ease-out 0.5s infinite;}
+  .sig-wave:nth-child(3){animation:sigWave 2s ease-out 1s infinite;}
+  .sig-wave:nth-child(4){animation:sigWave 2s ease-out 1.5s infinite;}
+  @keyframes sigWave{0%{opacity:0.8;stroke-width:1.5;}100%{opacity:0;stroke-width:0.3;}}
+
+  .sat-blink:nth-child(5){animation:satBlink 2s ease-in-out 0s infinite;}
+  .sat-blink:nth-child(6){animation:satBlink 2s ease-in-out 0.5s infinite;}
+  .sat-blink:nth-child(7){animation:satBlink 2s ease-in-out 1s infinite;}
+  .sat-blink:nth-child(8){animation:satBlink 2s ease-in-out 1.5s infinite;}
+  @keyframes satBlink{0%,100%{opacity:0.8;}50%{opacity:0.2;}}
+
+  /* Tip ping effect */
+  .tip-ping{animation:tipPing 1.8s ease-out infinite;}
+  @keyframes tipPing{0%{opacity:1;r:2;}100%{opacity:0;r:6;}}
+  .tip-glow{animation:tipGlow 1.8s ease-out infinite;}
+  @keyframes tipGlow{0%{opacity:0.6;rx:18;}100%{opacity:0;rx:30;}}
+
+  /* Loading text */
+  .loading-text{font-size:13px; color:var(--muted); letter-spacing:3px; text-transform:uppercase; font-weight:600;}
+  .loading-dots{display:flex; gap:6px; margin-top:-8px;}
+  .loading-dots span{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:0.4;animation:dotBounce 1.4s ease-in-out infinite;}
+  .loading-dots span:nth-child(2){animation-delay:0.2s;}
+  .loading-dots span:nth-child(3){animation-delay:0.4s;}
+  @keyframes dotBounce{0%,100%{opacity:0.4;transform:translateY(0);}50%{opacity:1;transform:translateY(-6px);}}
+</style>
+</head>
+<body>
+
+<div id="loginScreen" style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="width:100%; max-width:360px;">
+    <h2 style="text-align:center; font-size:16px;">Sign in — Equipment Tracker</h2>
+    <label>Email</label>
+    <input id="loginEmail" type="email" placeholder="district@spatio-tracker.local">
+    <label>Password</label>
+    <input id="loginPassword" type="password" placeholder="••••••••">
+    <button class="primary" id="btnLogin">Sign In</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<div id="loadingScreen" style="min-height:100vh; display:none; align-items:center; justify-content:center; padding:20px; flex-direction:column; gap:20px;">
+  <div class="survey-loader">
+    <svg viewBox="0 0 200 340" width="160" height="272" fill="none" class="survey-svg">
+      <!-- Glow under pole tip -->
+      <ellipse cx="100" cy="325" rx="18" ry="4" fill="var(--bad)" opacity="0.4" class="tip-glow"/>
+      <!-- Pole shadow -->
+      <ellipse cx="100" cy="328" rx="28" ry="5" fill="#000" opacity="0.3"/>
+
+      <!-- Carbon fiber pole -->
+      <rect x="96" y="110" width="8" height="210" rx="2" fill="url(#poleGrad)"/>
+      <!-- Pole segments -->
+      <line x1="96" y1="160" x2="104" y2="160" stroke="#1a1a1a" stroke-width="0.8" opacity="0.6"/>
+      <line x1="96" y1="210" x2="104" y2="210" stroke="#1a1a1a" stroke-width="0.8" opacity="0.6"/>
+      <line x1="96" y1="260" x2="104" y2="260" stroke="#1a1a1a" stroke-width="0.8" opacity="0.6"/>
+
+      <!-- Pole tip / spike -->
+      <path d="M98 320 L100 332 L102 320 Z" fill="#c0392b"/>
+      <circle cx="100" cy="332" r="2" fill="#e74c3c" class="tip-ping"/>
+
+      <!-- Data collector clamp -->
+      <rect x="90" y="185" width="20" height="8" rx="2" fill="#444"/>
+
+      <!-- Data collector / tablet -->
+      <g class="data-collector">
+        <rect x="78" y="140" width="44" height="58" rx="5" fill="#1e3a5f" stroke="#2c5282" stroke-width="1.5"/>
+        <rect x="82" y="144" width="36" height="42" rx="2" fill="#0d1b2a"/>
+        <!-- Screen content -->
+        <circle cx="100" cy="158" r="8" stroke="var(--good)" stroke-width="1.5" fill="none" class="screen-sat"/>
+        <circle cx="100" cy="158" r="2" fill="var(--good)" class="screen-dot"/>
+        <line x1="88" y1="172" x2="112" y2="172" stroke="#2c5282" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="88" y1="178" x2="108" y2="178" stroke="#2c5282" stroke-width="1.5" stroke-linecap="round"/>
+        <!-- Home button -->
+        <circle cx="100" cy="192" r="3" fill="#333" stroke="#555" stroke-width="0.5"/>
+      </g>
+
+      <!-- Receiver mount / adapter -->
+      <rect x="92" y="100" width="16" height="12" rx="2" fill="#333"/>
+      <rect x="94" y="96" width="12" height="6" rx="1" fill="#222"/>
+
+      <!-- GNSS Receiver Dome -->
+      <g class="receiver-dome">
+        <!-- Main dome body -->
+        <path d="M70 96 Q70 52 100 52 Q130 52 130 96 Z" fill="url(#domeGrad)"/>
+        <!-- Dome highlight -->
+        <ellipse cx="88" cy="68" rx="10" ry="6" fill="#fff" opacity="0.15" transform="rotate(-20 88 68)"/>
+        <!-- Trimble-style ring -->
+        <rect x="68" y="92" width="64" height="6" rx="2" fill="#1a1a1a"/>
+        <rect x="70" y="93" width="60" height="2" rx="1" fill="#333"/>
+        <!-- LED indicators -->
+        <circle cx="85" cy="88" r="2.5" fill="var(--good)" class="led-green"/>
+        <circle cx="100" cy="88" r="2.5" fill="var(--warn)" class="led-yellow"/>
+        <circle cx="115" cy="88" r="2.5" fill="var(--bad)" class="led-red"/>
+        <!-- Top cap -->
+        <ellipse cx="100" cy="52" rx="14" ry="4" fill="#f39c12"/>
+        <ellipse cx="100" cy="50" rx="10" ry="2.5" fill="#f1c40f"/>
+      </g>
+
+      <!-- Satellite signals -->
+      <g class="sat-signals">
+        <path d="M60 45 Q45 30 55 15" stroke="var(--good)" stroke-width="1" fill="none" opacity="0" class="sig-wave"/>
+        <path d="M140 45 Q155 30 145 15" stroke="var(--good)" stroke-width="1" fill="none" opacity="0" class="sig-wave"/>
+        <path d="M75 40 Q60 20 70 5" stroke="var(--good)" stroke-width="1" fill="none" opacity="0" class="sig-wave"/>
+        <path d="M125 40 Q140 20 130 5" stroke="var(--good)" stroke-width="1" fill="none" opacity="0" class="sig-wave"/>
+        <circle cx="55" cy="12" r="1.5" fill="var(--good)" opacity="0" class="sat-blink"/>
+        <circle cx="145" cy="12" r="1.5" fill="var(--good)" opacity="0" class="sat-blink"/>
+        <circle cx="70" cy="3" r="1.5" fill="var(--good)" opacity="0" class="sat-blink"/>
+        <circle cx="130" cy="3" r="1.5" fill="var(--good)" opacity="0" class="sat-blink"/>
+      </g>
+
+      <!-- Gradients -->
+      <defs>
+        <linearGradient id="domeGrad" x1="100" y1="52" x2="100" y2="96" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#f39c12"/>
+          <stop offset="40%" stop-color="#e67e22"/>
+          <stop offset="100%" stop-color="#d35400"/>
+        </linearGradient>
+        <linearGradient id="poleGrad" x1="96" y1="110" x2="104" y2="110" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#2c2c2c"/>
+          <stop offset="30%" stop-color="#4a4a4a"/>
+          <stop offset="50%" stop-color="#555"/>
+          <stop offset="70%" stop-color="#4a4a4a"/>
+          <stop offset="100%" stop-color="#2c2c2c"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+  <div class="loading-text">SURVEYING LAND DATA</div>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+</div><div id="appRoot" style="display:none;">
+
+<header>
+  <h1>Spatio Equipment Tracker</h1>
+  <div style="font-size:11px; color:var(--muted);" id="roleTag"></div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <div class="status"><span class="dot" id="connDot"></span><span id="connText">connecting…</span></div>
+    <button id="btnLogout" style="background:none; border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer;">Sign out</button>
+  </div>
+</header>
+
+<nav>
+  <button data-tab="checkout" class="active">Check Out</button>
+  <button data-tab="checkin">Check In</button>
+  <button data-tab="items">Items</button>
+  <button data-tab="surveyors">Surveyors</button>
+  <button data-tab="history">History</button>
+  <button data-tab="users" id="navUsers" style="display:none;">Users</button>
+</nav>
+
+<main>
+
+  <!-- CHECK OUT -->
+  <section id="tab-checkout" class="active">
+    <div class="card">
+      <h2>Scan or select item</h2>
+      <button class="secondary" id="startScanOut">📷 Scan QR code</button>
+      <div id="qr-reader-out"></div>
+      <label>Item</label>
+      <select id="outItemSelect"><option value="">— select item —</option></select>
+
+      <label>Surveyor name</label>
+      <select id="outSurveyor"><option value="">— select surveyor —</option></select>
+
+      <label>Custody type</label>
+      <select id="outCustodyType">
+        <option value="daily">Daily — same-day return to office</option>
+        <option value="extended">Extended field custody — remote site, held for a period</option>
+      </select>
+
+      <div id="extendedFields" style="display:none;">
+        <label>Expected return date</label>
+        <input id="outReturnDate" type="date">
+        <label>Affidavit reference / number</label>
+        <input id="outAffidavit" placeholder="e.g. affidavit filed 19-Jul-2026, ref #12">
+      </div>
+
+      <label>Notes (optional)</label>
+      <input id="outNotes" placeholder="e.g. taking spare battery too">
+
+      <button class="primary" id="btnCheckout">Check Out</button>
+      <div class="msg" id="outMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Currently out — daily</h2>
+      <div id="outList" class="item-list"><div class="empty">Loading…</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Extended field custody</h2>
+      <div id="extendedList" class="item-list"><div class="empty">Loading…</div></div>
+    </div>
+  </section>
+
+  <!-- CHECK IN -->
+  <section id="tab-checkin">
+    <div class="card">
+      <h2>Scan or select item to return</h2>
+      <button class="secondary" id="startScanIn">📷 Scan QR code</button>
+      <div id="qr-reader-in"></div>
+      <label>Item currently out</label>
+      <select id="inItemSelect"><option value="">— select item —</option></select>
+
+      <label>Condition on return</label>
+      <select id="inCondition">
+        <option value="OK">OK — working fine</option>
+        <option value="Damaged">Damaged</option>
+        <option value="Missing part">Missing part / accessory</option>
+      </select>
+
+      <label>Notes (optional)</label>
+      <input id="inNotes" placeholder="describe damage or missing part">
+
+      <button class="primary" id="btnCheckin">Check In</button>
+      <div class="msg" id="inMsg"></div>
+    </div>
+  </section>
+
+  <!-- ITEMS -->
+  <section id="tab-items">
+    <div class="card">
+      <h2>Add new item</h2>
+      <div class="row">
+        <div>
+          <label>District</label>
+          <select id="newDistrict">
+            <option value="LHR">Lahore</option>
+            <option value="KSR">Kasur</option>
+            <option value="NKS">Nankana Sahib</option>
+            <option value="SKP">Sheikhupura</option>
+            <option value="GJT">Gujrat</option>
+            <option value="MBD">Mandi Bahauddin</option>
+            <option value="HFD">Hafizabad</option>
+            <option value="WZD">Wazirabad</option>
+            <option value="SGD">Sargodha</option>
+            <option value="KSB">Khushab</option>
+            <option value="MWL">Mianwali</option>
+            <option value="BKR">Bhakkar</option>
+          </select>
+        </div>
+        <div>
+          <label>Type</label>
+          <select id="newType">
+            <option>DGPS</option>
+            <option>ROD</option>
             <option>BAG-DGPS</option>
             <option>BAG-ROD</option>
             <option>CHARGER</option>
