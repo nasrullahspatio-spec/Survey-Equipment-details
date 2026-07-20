@@ -398,6 +398,10 @@
             <label>Manufacturer / Company</label>
             <input id="newManufacturer" placeholder="e.g. Trimble, Leica, CHC, South">
           </div>
+          <div id="descriptionWrap" style="display:none;">
+            <label>Description</label>
+            <input id="newDescription" placeholder="e.g. tripod, prism, range pole">
+          </div>
         </div>
       </div>
       <label>Number (auto if blank)</label>
@@ -908,7 +912,7 @@ function renderItemMaster(){
     return;
   }
   wrap.innerHTML = "";
-  const itemTypes = ["DGPS","ROD","BAG-DGPS","BAG-ROD","CHARGER","BATTERY","OTHER"];
+  const itemTypes = ["DGPS","ROD","BOX-DGPS","BAG-DGPS","BAG-ROD","CHARGER","BATTERY","OTHER"];
   filtered.forEach(id=>{
     const it = itemsCache[id];
     const row = document.createElement("div");
@@ -920,6 +924,7 @@ function renderItemMaster(){
       row.style.gap = "8px";
       const typeOptions = itemTypes.map(t => `<option value="${t}" ${t===it.type?"selected":""}>${t}</option>`).join("");
       const showMfr = it.type === "DGPS";
+      const showDesc = it.type === "OTHER";
       row.innerHTML = `
         <div class="id">${id}</div>
         <label style="margin:2px 0 0;">Type</label>
@@ -927,6 +932,7 @@ function renderItemMaster(){
         <label style="margin:2px 0 0;">Serial number</label>
         <input id="editSerial-${id}" value="${it.serial || ""}" placeholder="manufacturer serial no.">
         ${showMfr ? `<label style="margin:2px 0 0;">Manufacturer / Company</label><input id="editManufacturer-${id}" value="${it.manufacturer || ""}" placeholder="e.g. Trimble, Leica, CHC">` : ""}
+        ${showDesc ? `<label style="margin:2px 0 0;">Description</label><input id="editDescription-${id}" value="${it.description || ""}" placeholder="e.g. tripod, prism, range pole">` : ""}
         <div style="display:flex; gap:8px; margin-top:4px;">
           <button class="secondary" style="margin:0;" data-cancel="${id}">Cancel</button>
           <button class="primary" style="margin:0;" data-save="${id}">Save</button>
@@ -938,7 +944,8 @@ function renderItemMaster(){
     const badgeClass = it.status === "With surveyor" ? "out" : (it.status === "Under repair" ? "repair" : "office");
     const withWho = (it.status === "With surveyor" && it.currentSurveyor) ? ` · with <b>${it.currentSurveyor}</b>` : "";
     const mfrTag = (it.type === "DGPS" && it.manufacturer) ? ` · ${it.manufacturer}` : "";
-    row.innerHTML = `<div><div class="id">${id}</div><div class="meta">${it.type} · ${it.district}${it.serial ? " · SN:"+it.serial : ""}${mfrTag}${withWho}</div></div>
+    const descTag = (it.type === "OTHER" && it.description) ? ` · ${it.description}` : "";
+    row.innerHTML = `<div><div class="id">${id}</div><div class="meta">${it.type}${descTag} · ${it.district}${it.serial ? " · SN:"+it.serial : ""}${mfrTag}${withWho}</div></div>
       <div style="display:flex; align-items:center; gap:6px;">
         <span class="badge ${badgeClass}">${it.status || "In office"}</span>
         <button class="editBtn" data-id="${id}" title="Edit item" style="background:none; border:none; color:var(--muted); font-size:15px; cursor:pointer; padding:4px 6px;">✎</button>
@@ -971,6 +978,12 @@ function renderItemMaster(){
       } else {
         updates.manufacturer = null;
       }
+      if (newType === "OTHER"){
+        const descEl = document.getElementById("editDescription-"+id);
+        updates.description = descEl ? (descEl.value.trim() || null) : null;
+      } else {
+        updates.description = null;
+      }
       db.ref("items/"+id).update(updates).then(()=>{
         editingId = null;
       }).catch(e=>alert("Error saving: "+e.message));
@@ -1001,6 +1014,7 @@ document.getElementById("btnAddItem").addEventListener("click", ()=>{
   let number = document.getElementById("newNumber").value.trim();
   const serial = document.getElementById("newSerial").value.trim();
   const manufacturer = document.getElementById("newManufacturer").value.trim();
+  const description = document.getElementById("newDescription").value.trim();
 
   if (type === "DGPS" && !serial){
     showMsg("addMsg","Serial number is required for DGPS units — it's your most reliable way to identify the unit if the QR label peels off.", false);
@@ -1031,19 +1045,25 @@ document.getElementById("btnAddItem").addEventListener("click", ()=>{
   if (type === "DGPS"){
     data.manufacturer = manufacturer || null;
   }
+  if (type === "OTHER"){
+    data.description = description || null;
+  }
 
   db.ref("items/"+itemId).set(data).then(()=>{
     showMsg("addMsg", `Added ${itemId}. Use "Print QR labels" below to print it.`, true);
     document.getElementById("newNumber").value = "";
     document.getElementById("newSerial").value = "";
     document.getElementById("newManufacturer").value = "";
+    document.getElementById("newDescription").value = "";
   }).catch(e=>showMsg("addMsg","Error: "+e.message, false));
 });
 
 // Show/hide manufacturer field based on type selection
 document.getElementById("newType").addEventListener("change", (e)=>{
-  const wrap = document.getElementById("manufacturerWrap");
-  wrap.style.display = e.target.value === "DGPS" ? "block" : "none";
+  const mfrWrap = document.getElementById("manufacturerWrap");
+  const descWrap = document.getElementById("descriptionWrap");
+  mfrWrap.style.display = e.target.value === "DGPS" ? "block" : "none";
+  descWrap.style.display = e.target.value === "OTHER" ? "block" : "none";
 });
 
 function renderQrPrintSelect(){
@@ -1093,6 +1113,7 @@ document.getElementById("btnExportExcel").addEventListener("click", ()=>{
       "Type": it.type || "",
       "Serial Number": it.serial || "",
       "Manufacturer": it.manufacturer || "",
+      "Description": it.description || "",
       "Status": it.status || "In office",
       "Currently With": it.currentSurveyor || "",
       "Date Added": it.addedDate ? new Date(it.addedDate).toLocaleDateString() : ""
