@@ -380,11 +380,16 @@
           <select id="newType">
             <option>DGPS</option>
             <option>ROD</option>
-            <option>BAG</option>
+            <option>BAG-DGPS</option>
+            <option>BAG-ROD</option>
             <option>CHARGER</option>
             <option>BATTERY</option>
             <option>OTHER</option>
           </select>
+          <div id="manufacturerWrap" style="display:none;">
+            <label>Manufacturer / Company</label>
+            <input id="newManufacturer" placeholder="e.g. Trimble, Leica, CHC, South">
+          </div>
         </div>
       </div>
       <label>Number (auto if blank)</label>
@@ -844,7 +849,7 @@ function renderItemMaster(){
     return;
   }
   wrap.innerHTML = "";
-  const itemTypes = ["DGPS","ROD","BAG","CHARGER","BATTERY","OTHER"];
+  const itemTypes = ["DGPS","ROD","BAG-DGPS","BAG-ROD","CHARGER","BATTERY","OTHER"];
   filtered.forEach(id=>{
     const it = itemsCache[id];
     const row = document.createElement("div");
@@ -855,12 +860,14 @@ function renderItemMaster(){
       row.style.alignItems = "stretch";
       row.style.gap = "8px";
       const typeOptions = itemTypes.map(t => `<option value="${t}" ${t===it.type?"selected":""}>${t}</option>`).join("");
+      const showMfr = it.type === "DGPS";
       row.innerHTML = `
         <div class="id">${id}</div>
         <label style="margin:2px 0 0;">Type</label>
         <select id="editType-${id}">${typeOptions}</select>
         <label style="margin:2px 0 0;">Serial number</label>
         <input id="editSerial-${id}" value="${it.serial || ""}" placeholder="manufacturer serial no.">
+        ${showMfr ? `<label style="margin:2px 0 0;">Manufacturer / Company</label><input id="editManufacturer-${id}" value="${it.manufacturer || ""}" placeholder="e.g. Trimble, Leica, CHC">` : ""}
         <div style="display:flex; gap:8px; margin-top:4px;">
           <button class="secondary" style="margin:0;" data-cancel="${id}">Cancel</button>
           <button class="primary" style="margin:0;" data-save="${id}">Save</button>
@@ -871,7 +878,8 @@ function renderItemMaster(){
 
     const badgeClass = it.status === "With surveyor" ? "out" : (it.status === "Under repair" ? "repair" : "office");
     const withWho = (it.status === "With surveyor" && it.currentSurveyor) ? ` · with <b>${it.currentSurveyor}</b>` : "";
-    row.innerHTML = `<div><div class="id">${id}</div><div class="meta">${it.type} · ${it.district}${it.serial ? " · SN:"+it.serial : ""}${withWho}</div></div>
+    const mfrTag = (it.type === "DGPS" && it.manufacturer) ? ` · ${it.manufacturer}` : "";
+    row.innerHTML = `<div><div class="id">${id}</div><div class="meta">${it.type} · ${it.district}${it.serial ? " · SN:"+it.serial : ""}${mfrTag}${withWho}</div></div>
       <div style="display:flex; align-items:center; gap:6px;">
         <span class="badge ${badgeClass}">${it.status || "In office"}</span>
         <button class="editBtn" data-id="${id}" title="Edit item" style="background:none; border:none; color:var(--muted); font-size:15px; cursor:pointer; padding:4px 6px;">✎</button>
@@ -897,7 +905,14 @@ function renderItemMaster(){
       const id = btn.dataset.save;
       const newType = document.getElementById("editType-"+id).value;
       const newSerial = document.getElementById("editSerial-"+id).value.trim();
-      db.ref("items/"+id).update({ type: newType, serial: newSerial || null }).then(()=>{
+      const updates = { type: newType, serial: newSerial || null };
+      if (newType === "DGPS"){
+        const mfrEl = document.getElementById("editManufacturer-"+id);
+        updates.manufacturer = mfrEl ? (mfrEl.value.trim() || null) : null;
+      } else {
+        updates.manufacturer = null;
+      }
+      db.ref("items/"+id).update(updates).then(()=>{
         editingId = null;
       }).catch(e=>alert("Error saving: "+e.message));
     });
@@ -926,6 +941,7 @@ document.getElementById("btnAddItem").addEventListener("click", ()=>{
   const type = document.getElementById("newType").value;
   let number = document.getElementById("newNumber").value.trim();
   const serial = document.getElementById("newSerial").value.trim();
+  const manufacturer = document.getElementById("newManufacturer").value.trim();
 
   if (type === "DGPS" && !serial){
     showMsg("addMsg","Serial number is required for DGPS units — it's your most reliable way to identify the unit if the QR label peels off.", false);
@@ -948,15 +964,27 @@ document.getElementById("btnAddItem").addEventListener("click", ()=>{
     return;
   }
 
-  db.ref("items/"+itemId).set({
+  const data = {
     district, type, serial: serial || null,
     status: "In office",
     addedDate: new Date().toISOString()
-  }).then(()=>{
+  };
+  if (type === "DGPS"){
+    data.manufacturer = manufacturer || null;
+  }
+
+  db.ref("items/"+itemId).set(data).then(()=>{
     showMsg("addMsg", `Added ${itemId}. Use "Print QR labels" below to print it.`, true);
     document.getElementById("newNumber").value = "";
     document.getElementById("newSerial").value = "";
+    document.getElementById("newManufacturer").value = "";
   }).catch(e=>showMsg("addMsg","Error: "+e.message, false));
+});
+
+// Show/hide manufacturer field based on type selection
+document.getElementById("newType").addEventListener("change", (e)=>{
+  const wrap = document.getElementById("manufacturerWrap");
+  wrap.style.display = e.target.value === "DGPS" ? "block" : "none";
 });
 
 function renderQrPrintSelect(){
@@ -1005,13 +1033,14 @@ document.getElementById("btnExportExcel").addEventListener("click", ()=>{
       "District": districtName(it.district) || "",
       "Type": it.type || "",
       "Serial Number": it.serial || "",
+      "Manufacturer": it.manufacturer || "",
       "Status": it.status || "In office",
       "Currently With": it.currentSurveyor || "",
       "Date Added": it.addedDate ? new Date(it.addedDate).toLocaleDateString() : ""
     };
   });
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [{wch:16},{wch:14},{wch:10},{wch:16},{wch:14},{wch:16},{wch:14}];
+  ws["!cols"] = [{wch:16},{wch:14},{wch:12},{wch:16},{wch:14},{wch:14},{wch:16},{wch:14}];
   const wb = XLSX.utils.book_new();
   const sheetLabel = districtFilter ? districtName(districtFilter) : "All Districts";
   XLSX.utils.book_append_sheet(wb, ws, sheetLabel.slice(0,31));
