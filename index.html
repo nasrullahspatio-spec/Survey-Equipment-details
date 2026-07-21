@@ -287,6 +287,7 @@
   <button data-tab="checkout" class="active">Check Out</button>
   <button data-tab="checkin">Check In</button>
   <button data-tab="items">Items</button>
+  <button data-tab="kits">Kits</button>
   <button data-tab="surveyors">Surveyors</button>
   <button data-tab="history">History</button>
   <button data-tab="users" id="navUsers" style="display:none;">Users</button>
@@ -297,11 +298,24 @@
   <!-- CHECK OUT -->
   <section id="tab-checkout" class="active">
     <div class="card">
-      <h2>Scan or select item</h2>
-      <button class="secondary" id="startScanOut">📷 Scan QR code</button>
-      <div id="qr-reader-out"></div>
-      <label>Item</label>
-      <select id="outItemSelect"><option value="">— select item —</option></select>
+      <h2>Check out — item or kit</h2>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button class="secondary" id="checkoutModeItem" style="flex:1; margin-top:0; background:var(--accent); color:#231a00; border-color:var(--accent);">Individual Item</button>
+        <button class="secondary" id="checkoutModeKit" style="flex:1; margin-top:0;">Kit</button>
+      </div>
+
+      <div id="checkoutItemWrap">
+        <button class="secondary" id="startScanOut">📷 Scan QR code</button>
+        <div id="qr-reader-out"></div>
+        <label>Item</label>
+        <select id="outItemSelect"><option value="">— select item —</option></select>
+      </div>
+
+      <div id="checkoutKitWrap" style="display:none;">
+        <label>Kit</label>
+        <select id="outKitSelect"><option value="">— select kit —</option></select>
+        <div id="kitPreviewOut" style="margin-top:10px;"></div>
+      </div>
 
       <label>Surveyor name</label>
       <select id="outSurveyor"><option value="">— select surveyor —</option></select>
@@ -340,13 +354,35 @@
   <!-- CHECK IN -->
   <section id="tab-checkin">
     <div class="card">
-      <h2>Scan or select item to return</h2>
-      <button class="secondary" id="startScanIn">📷 Scan QR code</button>
-      <div id="qr-reader-in"></div>
-      <label>Item currently out</label>
-      <select id="inItemSelect"><option value="">— select item —</option></select>
+      <h2>Check in — item or kit</h2>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button class="secondary" id="checkinModeItem" style="flex:1; margin-top:0; background:var(--accent); color:#231a00; border-color:var(--accent);">Individual Item</button>
+        <button class="secondary" id="checkinModeKit" style="flex:1; margin-top:0;">Kit</button>
+      </div>
 
-      <label>Condition on return</label>
+      <div id="checkinItemWrap">
+        <button class="secondary" id="startScanIn">📷 Scan QR code</button>
+        <div id="qr-reader-in"></div>
+        <label>Item currently out</label>
+        <select id="inItemSelect"><option value="">— select item —</option></select>
+
+        <label>Condition on return</label>
+        <select id="inCondition">
+          <option value="OK">OK — working fine</option>
+          <option value="Damaged">Damaged</option>
+          <option value="Missing part">Missing part / accessory</option>
+        </select>
+
+        <label>Notes (optional)</label>
+        <input id="inNotes" placeholder="describe damage or missing part">
+      </div>
+
+      <div id="checkinKitWrap" style="display:none;">
+        <label>Kit currently out</label>
+        <select id="inKitSelect"><option value="">— select kit —</option></select>
+        <div id="kitPreviewIn" style="margin-top:10px;"></div>
+        <div id="kitItemConditions" style="margin-top:10px;"></div>
+      </div>
       <select id="inCondition">
         <option value="OK">OK — working fine</option>
         <option value="Damaged">Damaged</option>
@@ -444,6 +480,72 @@
       <button class="secondary" id="btnBuildPrint">Build label sheet</button>
       <div id="qr-print"></div>
       <button class="secondary" id="btnPrintQr" style="display:none;">🖨️ Print QR labels</button>
+    </div>
+  </section>
+
+  <!-- KITS -->
+  <section id="tab-kits">
+    <div class="card">
+      <h2>Create new kit</h2>
+      <div class="row">
+        <div>
+          <label>District</label>
+          <select id="kitDistrict">
+            <option value="LHR">Lahore</option>
+            <option value="KSR">Kasur</option>
+            <option value="NKS">Nankana Sahib</option>
+            <option value="SKP">Sheikhupura</option>
+            <option value="GJT">Gujrat</option>
+            <option value="MBD">Mandi Bahauddin</option>
+            <option value="HFD">Hafizabad</option>
+            <option value="WZD">Wazirabad</option>
+            <option value="SGD">Sargodha</option>
+            <option value="KSB">Khushab</option>
+            <option value="MWL">Mianwali</option>
+            <option value="BKR">Bhakkar</option>
+          </select>
+        </div>
+        <div>
+          <label>Kit number (auto if blank)</label>
+          <input id="kitNumber" placeholder="e.g. 01">
+        </div>
+      </div>
+      <label>Add items to this kit</label>
+      <div class="row">
+        <select id="kitItemSelect" style="flex:3;">
+          <option value="">— select available item —</option>
+        </select>
+        <button class="secondary" id="btnAddToKit" style="flex:1; margin-top:0;">Add to kit</button>
+      </div>
+      <div id="kitItemsPreview" class="item-list" style="margin-top:10px;">
+        <div class="empty">No items added to kit yet. Select items above.</div>
+      </div>
+      <button class="primary" id="btnCreateKit">Create Kit</button>
+      <div class="msg" id="kitMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Kit list</h2>
+      <div class="row">
+        <input class="searchbar" id="kitSearch" placeholder="search by kit ID…" style="margin-bottom:0;">
+        <select id="kitDistrictFilter" style="max-width:150px;">
+          <option value="">All districts</option>
+          <option value="LHR">Lahore</option>
+          <option value="KSR">Kasur</option>
+          <option value="NKS">Nankana Sahib</option>
+          <option value="SKP">Sheikhupura</option>
+          <option value="GJT">Gujrat</option>
+          <option value="MBD">Mandi Bahauddin</option>
+          <option value="HFD">Hafizabad</option>
+          <option value="WZD">Wazirabad</option>
+          <option value="SGD">Sargodha</option>
+          <option value="KSB">Khushab</option>
+          <option value="MWL">Mianwali</option>
+          <option value="BKR">Bhakkar</option>
+        </select>
+      </div>
+      <div id="kitList" class="item-list"><div class="empty">No kits created yet.</div></div>
+      <button class="secondary" id="btnExportKits">⬇️ Export kits to Excel</button>
     </div>
   </section>
 
@@ -946,7 +1048,8 @@ function renderItemMaster(){
     const withWho = (it.status === "With surveyor" && it.currentSurveyor) ? ` · with <b>${it.currentSurveyor}</b>` : "";
     const mfrTag = (it.type === "DGPS" && it.manufacturer) ? ` · ${it.manufacturer}` : "";
     const descTag = (it.type === "OTHER" && it.description) ? ` · ${it.description}` : "";
-    row.innerHTML = `<div><div class="id">${id}</div><div class="meta">${it.type}${descTag} · ${it.district}${it.serial ? " · SN:"+it.serial : ""}${mfrTag}${withWho}</div></div>
+    const kitTag = it.inKit ? ` · in kit <b>${it.inKit}</b>` : "";
+    row.innerHTML = `<div><div class="id">${id}</div><div class="meta">${it.type}${descTag} · ${it.district}${it.serial ? " · SN:"+it.serial : ""}${mfrTag}${kitTag}${withWho}</div></div>
       <div style="display:flex; align-items:center; gap:6px;">
         <span class="badge ${badgeClass}">${it.status || "In office"}</span>
         <button class="editBtn" data-id="${id}" title="Edit item" style="background:none; border:none; color:var(--muted); font-size:15px; cursor:pointer; padding:4px 6px;">✎</button>
@@ -1152,29 +1255,43 @@ let verifyingId = null;
 function renderOutList(){
   const dailyWrap = document.getElementById("outList");
   const extWrap = document.getElementById("extendedList");
+
+  // Get individual items out
   const outIds = Object.keys(itemsCache).filter(id => itemsCache[id].status === "With surveyor" && (currentRole !== "manager" || itemsCache[id].district === currentDistrict));
   const dailyIds = outIds.filter(id => (itemsCache[id].custodyType || "daily") === "daily");
   const extIds = outIds.filter(id => itemsCache[id].custodyType === "extended");
 
-  if (dailyIds.length === 0){ dailyWrap.innerHTML = '<div class="empty">Nothing checked out right now.</div>'; }
+  // Get kits out
+  const outKitIds = Object.keys(kitsCache).filter(id => kitsCache[id].status === "With surveyor" && (currentRole !== "manager" || kitsCache[id].district === currentDistrict));
+  const dailyKitIds = outKitIds.filter(id => (kitsCache[id].custodyType || "daily") === "daily");
+  const extKitIds = outKitIds.filter(id => kitsCache[id].custodyType === "extended");
+
+  // Render daily items + kits
+  const allDailyIds = [...dailyIds, ...dailyKitIds];
+  if (allDailyIds.length === 0){ dailyWrap.innerHTML = '<div class="empty">Nothing checked out right now.</div>'; }
   else {
     dailyWrap.innerHTML = "";
-    dailyIds.sort().forEach(id=>{
-      const it = itemsCache[id];
+    allDailyIds.sort().forEach(id=>{
+      const isKit = id.includes("-KIT-");
+      const it = isKit ? kitsCache[id] : itemsCache[id];
       const row = document.createElement("div");
       row.className = "item-row";
-      row.innerHTML = `<div><div class="id">${id}</div><div class="meta">with ${it.currentSurveyor || "unknown"}</div></div>
+      const typeLabel = isKit ? "kit" : it.type;
+      row.innerHTML = `<div><div class="id">${id}</div><div class="meta">${typeLabel} · with ${it.currentSurveyor || "unknown"}</div></div>
         <span class="badge out">out</span>`;
       dailyWrap.appendChild(row);
     });
   }
 
-  if (extIds.length === 0){ extWrap.innerHTML = '<div class="empty">No extended field assignments right now.</div>'; }
+  // Render extended items + kits
+  const allExtIds = [...extIds, ...extKitIds];
+  if (allExtIds.length === 0){ extWrap.innerHTML = '<div class="empty">No extended field assignments right now.</div>'; }
   else {
     extWrap.innerHTML = "";
     const todayStr = new Date().toISOString().slice(0,10);
-    extIds.sort().forEach(id=>{
-      const it = itemsCache[id];
+    allExtIds.sort().forEach(id=>{
+      const isKit = id.includes("-KIT-");
+      const it = isKit ? kitsCache[id] : itemsCache[id];
       const overdue = it.expectedReturn && it.expectedReturn < todayStr;
 
       let verifyLine = "never verified";
@@ -1190,10 +1307,11 @@ function renderOutList(){
       row.style.flexDirection = "column";
       row.style.alignItems = "stretch";
       row.style.gap = "8px";
+      const typeLabel = isKit ? "kit" : it.type;
 
       if (verifyingId === id){
         row.innerHTML = `
-          <div><div class="id">${id}</div><div class="meta">with ${it.currentSurveyor || "unknown"}</div></div>
+          <div><div class="id">${id}</div><div class="meta">${typeLabel} · with ${it.currentSurveyor || "unknown"}</div></div>
           <label style="margin:2px 0 0;">Status after calling surveyor</label>
           <select id="verifyStatus-${id}">
             <option value="OK">OK — surveyor confirmed equipment is fine</option>
@@ -1208,7 +1326,7 @@ function renderOutList(){
       } else {
         row.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div><div class="id">${id}</div><div class="meta">with ${it.currentSurveyor || "unknown"} · expected back ${it.expectedReturn || "not set"}</div></div>
+            <div><div class="id">${id}</div><div class="meta">${typeLabel} · with ${it.currentSurveyor || "unknown"} · expected back ${it.expectedReturn || "not set"}</div></div>
             <span class="badge ${overdue ? 'repair' : 'out'}">${overdue ? 'overdue' : 'in field'}</span>
           </div>
           <div class="meta" style="${verifyOverdue ? 'color:var(--warn);' : ''}">${verifyLine}${verifyOverdue ? " · verification due" : ""}</div>
@@ -1229,10 +1347,17 @@ function renderOutList(){
         const status = document.getElementById("verifyStatus-"+id).value;
         const notes = document.getElementById("verifyNotes-"+id).value.trim();
         const today = new Date().toISOString().slice(0,10);
-        const txId = itemsCache[id].openTxId;
+        const isKit = id.includes("-KIT-");
+        const it = isKit ? kitsCache[id] : itemsCache[id];
+        const txId = it.openTxId;
         const updates = {};
-        updates["items/"+id+"/lastVerified"] = today;
-        updates["items/"+id+"/lastVerifiedStatus"] = status;
+        if (isKit){
+          updates["kits/"+id+"/lastVerified"] = today;
+          updates["kits/"+id+"/lastVerifiedStatus"] = status;
+        } else {
+          updates["items/"+id+"/lastVerified"] = today;
+          updates["items/"+id+"/lastVerifiedStatus"] = status;
+        }
         if (txId){
           const vRef = db.ref("transactions/"+txId+"/verifications").push();
           vRef.set({ date: today, status, notes: notes || null });
@@ -1250,14 +1375,13 @@ document.getElementById("outCustodyType").addEventListener("change", (e)=>{
 });
 
 document.getElementById("btnCheckout").addEventListener("click", ()=>{
-  const itemId = document.getElementById("outItemSelect").value;
+  const isKitMode = document.getElementById("checkoutKitWrap").style.display !== "none";
   const surveyor = document.getElementById("outSurveyor").value.trim();
   const notes = document.getElementById("outNotes").value.trim();
   const custodyType = document.getElementById("outCustodyType").value;
   const returnDate = document.getElementById("outReturnDate").value;
   const affidavit = document.getElementById("outAffidavit").value.trim();
 
-  if (!itemId){ showMsg("outMsg","Select an item first.", false); return; }
   if (!surveyor){ showMsg("outMsg","Enter the surveyor's name.", false); return; }
   if (custodyType === "extended" && !returnDate){
     showMsg("outMsg","Extended custody requires an expected return date.", false); return;
@@ -1266,36 +1390,84 @@ document.getElementById("btnCheckout").addEventListener("click", ()=>{
     showMsg("outMsg","Extended custody requires an affidavit reference on file.", false); return;
   }
 
-  const txRef = db.ref("transactions").push();
-  txRef.set({
-    itemId, surveyor,
-    district: itemsCache[itemId].district,
-    custodyType,
-    expectedReturn: custodyType === "extended" ? returnDate : null,
-    affidavit: custodyType === "extended" ? affidavit : null,
-    checkOutTime: new Date().toISOString(),
-    checkInTime: null,
-    condition: null,
-    notesOut: notes || null,
-    status: "out"
-  }).then(()=>{
-    return db.ref("items/"+itemId).update({
-      status: "With surveyor",
-      currentSurveyor: surveyor,
+  if (isKitMode){
+    const kitId = document.getElementById("outKitSelect").value;
+    if (!kitId){ showMsg("outMsg","Select a kit first.", false); return; }
+    const kit = kitsCache[kitId];
+    const txRef = db.ref("transactions").push();
+    const updates = {};
+    updates["transactions/"+txRef.key] = {
+      kitId, surveyor,
+      district: kit.district,
       custodyType,
       expectedReturn: custodyType === "extended" ? returnDate : null,
       affidavit: custodyType === "extended" ? affidavit : null,
-      openTxId: txRef.key
+      checkOutTime: new Date().toISOString(),
+      checkInTime: null,
+      condition: null,
+      notesOut: notes || null,
+      status: "out",
+      isKit: true
+    };
+    (kit.items || []).forEach(itemId => {
+      updates["items/"+itemId+"/status"] = "With surveyor";
+      updates["items/"+itemId+"/currentSurveyor"] = surveyor;
+      updates["items/"+itemId+"/custodyType"] = custodyType;
+      updates["items/"+itemId+"/expectedReturn"] = custodyType === "extended" ? returnDate : null;
+      updates["items/"+itemId+"/affidavit"] = custodyType === "extended" ? affidavit : null;
+      updates["items/"+itemId+"/openTxId"] = txRef.key;
     });
-  }).then(()=>{
-    showMsg("outMsg", `${itemId} checked out to ${surveyor} (${custodyType === "extended" ? "extended custody" : "daily"}).`, true);
-    document.getElementById("outSurveyor").value = "";
-    document.getElementById("outNotes").value = "";
-    document.getElementById("outReturnDate").value = "";
-    document.getElementById("outAffidavit").value = "";
-    document.getElementById("outCustodyType").value = "daily";
-    document.getElementById("extendedFields").style.display = "none";
-  }).catch(e=>showMsg("outMsg","Error: "+e.message, false));
+    updates["kits/"+kitId+"/status"] = "With surveyor";
+    updates["kits/"+kitId+"/currentSurveyor"] = surveyor;
+    updates["kits/"+kitId+"/custodyType"] = custodyType;
+    updates["kits/"+kitId+"/expectedReturn"] = custodyType === "extended" ? returnDate : null;
+    updates["kits/"+kitId+"/affidavit"] = custodyType === "extended" ? affidavit : null;
+    updates["kits/"+kitId+"/openTxId"] = txRef.key;
+    db.ref().update(updates).then(()=>{
+      showMsg("outMsg", `${kitId} checked out to ${surveyor} (${custodyType === "extended" ? "extended custody" : "daily"}).`, true);
+      document.getElementById("outKitSelect").value = "";
+      document.getElementById("kitPreviewOut").innerHTML = "";
+      document.getElementById("outSurveyor").value = "";
+      document.getElementById("outNotes").value = "";
+      document.getElementById("outReturnDate").value = "";
+      document.getElementById("outAffidavit").value = "";
+      document.getElementById("outCustodyType").value = "daily";
+      document.getElementById("extendedFields").style.display = "none";
+    }).catch(e=>showMsg("outMsg","Error: "+e.message, false));
+  } else {
+    const itemId = document.getElementById("outItemSelect").value;
+    if (!itemId){ showMsg("outMsg","Select an item first.", false); return; }
+    const txRef = db.ref("transactions").push();
+    txRef.set({
+      itemId, surveyor,
+      district: itemsCache[itemId].district,
+      custodyType,
+      expectedReturn: custodyType === "extended" ? returnDate : null,
+      affidavit: custodyType === "extended" ? affidavit : null,
+      checkOutTime: new Date().toISOString(),
+      checkInTime: null,
+      condition: null,
+      notesOut: notes || null,
+      status: "out"
+    }).then(()=>{
+      return db.ref("items/"+itemId).update({
+        status: "With surveyor",
+        currentSurveyor: surveyor,
+        custodyType,
+        expectedReturn: custodyType === "extended" ? returnDate : null,
+        affidavit: custodyType === "extended" ? affidavit : null,
+        openTxId: txRef.key
+      });
+    }).then(()=>{
+      showMsg("outMsg", `${itemId} checked out to ${surveyor} (${custodyType === "extended" ? "extended custody" : "daily"}).`, true);
+      document.getElementById("outSurveyor").value = "";
+      document.getElementById("outNotes").value = "";
+      document.getElementById("outReturnDate").value = "";
+      document.getElementById("outAffidavit").value = "";
+      document.getElementById("outCustodyType").value = "daily";
+      document.getElementById("extendedFields").style.display = "none";
+    }).catch(e=>showMsg("outMsg","Error: "+e.message, false));
+  }
 });
 
 // ---------- CHECK IN ----------
@@ -1305,7 +1477,7 @@ function renderInSelect(){
   sel.innerHTML = '<option value="">— select item —</option>';
   Object.keys(itemsCache).sort().forEach(id=>{
     if (currentRole === "manager" && itemsCache[id].district !== currentDistrict) return;
-    if (itemsCache[id].status === "With surveyor"){
+    if (itemsCache[id].status === "With surveyor" && !itemsCache[id].inKit){
       const opt = document.createElement("option");
       opt.value = id; opt.textContent = `${id} (with ${itemsCache[id].currentSurveyor || "?"})`;
       sel.appendChild(opt);
@@ -1315,35 +1487,83 @@ function renderInSelect(){
 }
 
 document.getElementById("btnCheckin").addEventListener("click", ()=>{
-  const itemId = document.getElementById("inItemSelect").value;
-  const condition = document.getElementById("inCondition").value;
-  const notes = document.getElementById("inNotes").value.trim();
-  if (!itemId){ showMsg("inMsg","Select an item first.", false); return; }
+  const isKitMode = document.getElementById("checkinKitWrap").style.display !== "none";
 
-  const item = itemsCache[itemId];
-  const txId = item.openTxId;
-  const newStatus = condition === "OK" ? "In office" : "Under repair";
-
-  const updates = {};
-  if (txId){
-    updates["transactions/"+txId+"/checkInTime"] = new Date().toISOString();
-    updates["transactions/"+txId+"/condition"] = condition;
-    updates["transactions/"+txId+"/notesIn"] = notes || null;
-    updates["transactions/"+txId+"/status"] = "closed";
+  if (isKitMode){
+    const kitId = document.getElementById("inKitSelect").value;
+    if (!kitId){ showMsg("inMsg","Select a kit first.", false); return; }
+    const kit = kitsCache[kitId];
+    const txId = kit.openTxId;
+    const itemConditions = {};
+    let hasIssue = false;
+    (kit.items || []).forEach(itemId => {
+      const cond = document.getElementById("kitItemCond-"+itemId).value;
+      const note = document.getElementById("kitItemNote-"+itemId).value.trim();
+      itemConditions[itemId] = { condition: cond, note: note || null };
+      if (cond !== "OK") hasIssue = true;
+    });
+    const kitStatus = hasIssue ? "Partial return" : "In office";
+    const updates = {};
+    if (txId){
+      updates["transactions/"+txId+"/checkInTime"] = new Date().toISOString();
+      updates["transactions/"+txId+"/status"] = "closed";
+      updates["transactions/"+txId+"/kitConditions"] = itemConditions;
+    }
+    (kit.items || []).forEach(itemId => {
+      const cond = itemConditions[itemId].condition;
+      const newStatus = cond === "OK" ? "In office" : "Under repair";
+      updates["items/"+itemId+"/status"] = newStatus;
+      updates["items/"+itemId+"/currentSurveyor"] = null;
+      updates["items/"+itemId+"/openTxId"] = null;
+      updates["items/"+itemId+"/custodyType"] = null;
+      updates["items/"+itemId+"/expectedReturn"] = null;
+      updates["items/"+itemId+"/affidavit"] = null;
+      updates["items/"+itemId+"/lastVerified"] = null;
+      updates["items/"+itemId+"/lastVerifiedStatus"] = null;
+      updates["items/"+itemId+"/checkInCondition"] = cond;
+      updates["items/"+itemId+"/checkInNote"] = itemConditions[itemId].note;
+    });
+    updates["kits/"+kitId+"/status"] = kitStatus;
+    updates["kits/"+kitId+"/currentSurveyor"] = null;
+    updates["kits/"+kitId+"/openTxId"] = null;
+    updates["kits/"+kitId+"/custodyType"] = null;
+    updates["kits/"+kitId+"/expectedReturn"] = null;
+    updates["kits/"+kitId+"/affidavit"] = null;
+    db.ref().update(updates).then(()=>{
+      const msg = hasIssue ? `${kitId} checked in — some items need attention.` : `${kitId} checked in — all items OK.`;
+      showMsg("inMsg", msg, !hasIssue);
+      document.getElementById("inKitSelect").value = "";
+      document.getElementById("kitPreviewIn").innerHTML = "";
+      document.getElementById("kitItemConditions").innerHTML = "";
+    }).catch(e=>showMsg("inMsg","Error: "+e.message, false));
+  } else {
+    const itemId = document.getElementById("inItemSelect").value;
+    const condition = document.getElementById("inCondition").value;
+    const notes = document.getElementById("inNotes").value.trim();
+    if (!itemId){ showMsg("inMsg","Select an item first.", false); return; }
+    const item = itemsCache[itemId];
+    const txId = item.openTxId;
+    const newStatus = condition === "OK" ? "In office" : "Under repair";
+    const updates = {};
+    if (txId){
+      updates["transactions/"+txId+"/checkInTime"] = new Date().toISOString();
+      updates["transactions/"+txId+"/condition"] = condition;
+      updates["transactions/"+txId+"/notesIn"] = notes || null;
+      updates["transactions/"+txId+"/status"] = "closed";
+    }
+    updates["items/"+itemId+"/status"] = newStatus;
+    updates["items/"+itemId+"/currentSurveyor"] = null;
+    updates["items/"+itemId+"/openTxId"] = null;
+    updates["items/"+itemId+"/custodyType"] = null;
+    updates["items/"+itemId+"/expectedReturn"] = null;
+    updates["items/"+itemId+"/affidavit"] = null;
+    updates["items/"+itemId+"/lastVerified"] = null;
+    updates["items/"+itemId+"/lastVerifiedStatus"] = null;
+    db.ref().update(updates).then(()=>{
+      showMsg("inMsg", `${itemId} checked in — marked ${newStatus}.`, true);
+      document.getElementById("inNotes").value = "";
+    }).catch(e=>showMsg("inMsg","Error: "+e.message, false));
   }
-  updates["items/"+itemId+"/status"] = newStatus;
-  updates["items/"+itemId+"/currentSurveyor"] = null;
-  updates["items/"+itemId+"/openTxId"] = null;
-  updates["items/"+itemId+"/custodyType"] = null;
-  updates["items/"+itemId+"/expectedReturn"] = null;
-  updates["items/"+itemId+"/affidavit"] = null;
-  updates["items/"+itemId+"/lastVerified"] = null;
-  updates["items/"+itemId+"/lastVerifiedStatus"] = null;
-
-  db.ref().update(updates).then(()=>{
-    showMsg("inMsg", `${itemId} checked in — marked ${newStatus}.`, true);
-    document.getElementById("inNotes").value = "";
-  }).catch(e=>showMsg("inMsg","Error: "+e.message, false));
 });
 
 // ---------- QR SCANNING ----------
@@ -1409,7 +1629,7 @@ function renderHistory(){
   let rows = Object.entries(txCache);
   if (currentRole === "manager") rows = rows.filter(([,t]) => t.district === currentDistrict);
   if (districtFilter) rows = rows.filter(([,t]) => t.district === districtFilter);
-  if (itemFilter) rows = rows.filter(([,t]) => t.itemId === itemFilter);
+  if (itemFilter) rows = rows.filter(([,t]) => t.itemId === itemFilter || t.kitId === itemFilter);
   if (surveyorFilter) rows = rows.filter(([,t]) => (t.surveyor||"").toLowerCase().includes(surveyorFilter));
   if (statusFilter) rows = rows.filter(([,t]) => t.status === statusFilter);
   rows.sort((a,b) => new Date(b[1].checkOutTime) - new Date(a[1].checkOutTime));
@@ -1422,12 +1642,16 @@ function renderHistory(){
     div.className = "history-item";
     const outTime = t.checkOutTime ? new Date(t.checkOutTime).toLocaleString() : "-";
     const inTime = t.checkInTime ? new Date(t.checkInTime).toLocaleString() : "still out";
+    const isKit = t.isKit;
+    const idLabel = isKit ? (t.kitId + " [KIT]") : t.itemId;
     const condTag = t.condition ? ` · ${t.condition}` : "";
     const custodyTag = t.custodyType === "extended" ? ` · extended (return by ${t.expectedReturn || "?"})` : "";
-    div.innerHTML = `<div class="top"><span>${t.itemId}</span><span>${t.surveyor}</span></div>
+    const kitContents = isKit && t.kitConditions ? `<div class="sub">kit conditions: ${Object.entries(t.kitConditions).map(([id, c])=>`${id}=${c.condition}`).join(", ")}</div>` : "";
+    div.innerHTML = `<div class="top"><span>${idLabel}</span><span>${t.surveyor}</span></div>
       <div class="sub">out: ${outTime} → in: ${inTime}${condTag}${custodyTag}</div>
       ${t.notesOut ? `<div class="sub">out note: ${t.notesOut}</div>` : ""}
-      ${t.notesIn ? `<div class="sub">in note: ${t.notesIn}</div>` : ""}`;
+      ${t.notesIn ? `<div class="sub">in note: ${t.notesIn}</div>` : ""}
+      ${kitContents}`;
     wrap.appendChild(div);
   });
 }
@@ -1565,6 +1789,316 @@ if (currentRole === "admin"){
     }
   });
 }
+
+
+// ---------- KITS ----------
+let kitsCache = {};
+let kitDraftItems = [];
+
+db.ref("kits").on("value", snap=>{
+  kitsCache = snap.val() || {};
+  renderKitList();
+  renderKitSelects();
+});
+
+function renderKitItemSelect(){
+  const sel = document.getElementById("kitItemSelect");
+  const district = document.getElementById("kitDistrict").value;
+  sel.innerHTML = '<option value="">— select available item —</option>';
+  Object.keys(itemsCache).sort().forEach(id=>{
+    const it = itemsCache[id];
+    if (it.district !== district) return;
+    if (it.status !== "In office") return;
+    if (it.inKit) return;
+    if (kitDraftItems.some(d=>d.id === id)) return;
+    if (currentRole === "manager" && it.district !== currentDistrict) return;
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = `${id} (${it.type}${it.serial ? " SN:"+it.serial : ""})`;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById("kitDistrict").addEventListener("change", renderKitItemSelect);
+
+document.getElementById("btnAddToKit").addEventListener("click", ()=>{
+  const sel = document.getElementById("kitItemSelect");
+  const itemId = sel.value;
+  if (!itemId) return;
+  const it = itemsCache[itemId];
+  kitDraftItems.push({ id: itemId, type: it.type, serial: it.serial || "" });
+  renderKitDraft();
+  renderKitItemSelect();
+});
+
+function renderKitDraft(){
+  const wrap = document.getElementById("kitItemsPreview");
+  if (kitDraftItems.length === 0){
+    wrap.innerHTML = '<div class="empty">No items added to kit yet. Select items above.</div>';
+    return;
+  }
+  wrap.innerHTML = "";
+  kitDraftItems.forEach((item, idx)=>{
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.innerHTML = `<div><div class="id">${item.id}</div><div class="meta">${item.type}${item.serial ? " · SN:"+item.serial : ""}</div></div>
+      <button class="removeKitItemBtn" data-idx="${idx}" style="background:none; border:none; color:var(--bad); font-size:16px; cursor:pointer; padding:4px 6px;">✕</button>`;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll(".removeKitItemBtn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      kitDraftItems.splice(parseInt(btn.dataset.idx), 1);
+      renderKitDraft();
+      renderKitItemSelect();
+    });
+  });
+}
+
+document.getElementById("btnCreateKit").addEventListener("click", ()=>{
+  const district = document.getElementById("kitDistrict").value;
+  let number = document.getElementById("kitNumber").value.trim();
+  if (kitDraftItems.length === 0){
+    showMsg("kitMsg", "Add at least one item to the kit first.", false);
+    return;
+  }
+  if (!number){
+    const existing = Object.keys(kitsCache).filter(id => id.startsWith(district+"-KIT-"));
+    const nums = existing.map(id => parseInt(id.split("-").pop(),10)).filter(n=>!isNaN(n));
+    const next = (nums.length ? Math.max(...nums) : 0) + 1;
+    number = String(next).padStart(2,"0");
+  } else {
+    number = number.padStart(2,"0");
+  }
+  const kitId = `${district}-KIT-${number}`;
+  if (kitsCache[kitId]){
+    showMsg("kitMsg", `${kitId} already exists. Choose a different number.`, false);
+    return;
+  }
+  const itemIds = kitDraftItems.map(i => i.id);
+  const kitData = {
+    district,
+    items: itemIds,
+    status: "In office",
+    createdDate: new Date().toISOString()
+  };
+  const updates = {};
+  updates["kits/"+kitId] = kitData;
+  itemIds.forEach(id => { updates["items/"+id+"/inKit"] = kitId; });
+  db.ref().update(updates).then(()=>{
+    showMsg("kitMsg", `Created ${kitId} with ${itemIds.length} items.`, true);
+    kitDraftItems = [];
+    renderKitDraft();
+    document.getElementById("kitNumber").value = "";
+  }).catch(e=>showMsg("kitMsg","Error: "+e.message, false));
+});
+
+function renderKitList(){
+  const search = (document.getElementById("kitSearch").value || "").toUpperCase();
+  const districtFilter = currentRole === "manager" ? currentDistrict : document.getElementById("kitDistrictFilter").value;
+  const wrap = document.getElementById("kitList");
+  let ids = Object.keys(kitsCache);
+  if (currentRole === "manager") ids = ids.filter(id => kitsCache[id].district === currentDistrict);
+  if (districtFilter) ids = ids.filter(id => kitsCache[id].district === districtFilter);
+  if (search) ids = ids.filter(id => id.includes(search));
+  if (ids.length === 0){
+    wrap.innerHTML = '<div class="empty">No kits created yet.</div>';
+    return;
+  }
+  wrap.innerHTML = "";
+  ids.sort().forEach(id=>{
+    const k = kitsCache[id];
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.style.flexDirection = "column";
+    row.style.alignItems = "stretch";
+    row.style.gap = "6px";
+    const badgeClass = k.status === "With surveyor" ? "out" : (k.status === "Partial return" ? "repair" : "office");
+    const withWho = k.currentSurveyor ? ` · with ${k.currentSurveyor}` : "";
+    const itemList = (k.items || []).map(iid => {
+      const it = itemsCache[iid];
+      return it ? `${iid} (${it.type})` : iid;
+    }).join(", ");
+    row.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div><div class="id">${id}</div><div class="meta">${districtName(k.district)}${withWho}</div></div>
+        <span class="badge ${badgeClass}">${k.status || "In office"}</span>
+      </div>
+      <div class="meta" style="font-size:11px;">Contains: ${itemList || "no items"}</div>
+      <div style="display:flex; gap:8px; margin-top:2px;">
+        ${k.status === "In office" ? `<button class="secondary" style="margin:0; flex:1; color:var(--bad); border-color:var(--bad);" data-kit-del="${id}">Delete</button>` : ""}
+      </div>`;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll("[data-kit-del]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const kitId = btn.dataset.kitDel;
+      if (!confirm(`Delete ${kitId}? Items inside will become available again.`)) return;
+      const k = kitsCache[kitId];
+      const updates = {};
+      updates["kits/"+kitId] = null;
+      (k.items || []).forEach(id => { updates["items/"+id+"/inKit"] = null; });
+      db.ref().update(updates).catch(e=>alert("Error: "+e.message));
+    });
+  });
+}
+
+document.getElementById("kitSearch").addEventListener("input", renderKitList);
+document.getElementById("kitDistrictFilter").addEventListener("change", renderKitList);
+
+document.getElementById("btnExportKits").addEventListener("click", ()=>{
+  const districtFilter = currentRole === "manager" ? currentDistrict : document.getElementById("kitDistrictFilter").value;
+  let ids = Object.keys(kitsCache).sort();
+  if (districtFilter) ids = ids.filter(id => kitsCache[id].district === districtFilter);
+  if (ids.length === 0){ showMsg("kitMsg","No kits to export.", false); return; }
+  const rows = ids.map(id=>{
+    const k = kitsCache[id];
+    const itemList = (k.items || []).map(iid => {
+      const it = itemsCache[iid];
+      return it ? `${iid} (${it.type})` : iid;
+    }).join("; ");
+    return {
+      "Kit ID": id,
+      "District": districtName(k.district) || "",
+      "Status": k.status || "In office",
+      "Assigned To": k.currentSurveyor || "",
+      "Items Inside": itemList,
+      "Date Created": k.createdDate ? new Date(k.createdDate).toLocaleDateString() : ""
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws["!cols"] = [{wch:14},{wch:14},{wch:14},{wch:16},{wch:40},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  const sheetLabel = districtFilter ? districtName(districtFilter) : "All Districts";
+  XLSX.utils.book_append_sheet(wb, ws, sheetLabel.slice(0,31));
+  const dateStr = new Date().toISOString().slice(0,10);
+  const fileLabel = districtFilter ? districtFilter : "all-districts";
+  XLSX.writeFile(wb, `kits-${fileLabel}-${dateStr}.xlsx`);
+});
+
+function renderKitSelects(){
+  const outSel = document.getElementById("outKitSelect");
+  const inSel = document.getElementById("inKitSelect");
+  if (!outSel || !inSel) return;
+  const outCurrent = outSel.value;
+  const inCurrent = inSel.value;
+  outSel.innerHTML = '<option value="">— select kit —</option>';
+  inSel.innerHTML = '<option value="">— select kit —</option>';
+  Object.keys(kitsCache).sort().forEach(id=>{
+    const k = kitsCache[id];
+    if (currentRole === "manager" && k.district !== currentDistrict) return;
+    if (k.status === "In office"){
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = `${id} (${k.items ? k.items.length + " items" : "empty"})`;
+      outSel.appendChild(opt);
+    }
+    if (k.status === "With surveyor"){
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = `${id} (with ${k.currentSurveyor || "?"})`;
+      inSel.appendChild(opt);
+    }
+  });
+  if ([...outSel.options].some(o=>o.value===outCurrent)) outSel.value = outCurrent;
+  if ([...inSel.options].some(o=>o.value===inCurrent)) inSel.value = inCurrent;
+}
+
+// Checkout mode toggle
+document.getElementById("checkoutModeItem").addEventListener("click", ()=>{
+  document.getElementById("checkoutItemWrap").style.display = "block";
+  document.getElementById("checkoutKitWrap").style.display = "none";
+  document.getElementById("checkoutModeItem").style.background = "var(--accent)";
+  document.getElementById("checkoutModeItem").style.color = "#231a00";
+  document.getElementById("checkoutModeItem").style.borderColor = "var(--accent)";
+  document.getElementById("checkoutModeKit").style.background = "transparent";
+  document.getElementById("checkoutModeKit").style.color = "var(--text)";
+  document.getElementById("checkoutModeKit").style.borderColor = "var(--line)";
+});
+document.getElementById("checkoutModeKit").addEventListener("click", ()=>{
+  document.getElementById("checkoutItemWrap").style.display = "none";
+  document.getElementById("checkoutKitWrap").style.display = "block";
+  document.getElementById("checkoutModeKit").style.background = "var(--accent)";
+  document.getElementById("checkoutModeKit").style.color = "#231a00";
+  document.getElementById("checkoutModeKit").style.borderColor = "var(--accent)";
+  document.getElementById("checkoutModeItem").style.background = "transparent";
+  document.getElementById("checkoutModeItem").style.color = "var(--text)";
+  document.getElementById("checkoutModeItem").style.borderColor = "var(--line)";
+  renderKitSelects();
+});
+
+document.getElementById("outKitSelect").addEventListener("change", (e)=>{
+  const kitId = e.target.value;
+  const preview = document.getElementById("kitPreviewOut");
+  if (!kitId || !kitsCache[kitId]){ preview.innerHTML = ""; return; }
+  const k = kitsCache[kitId];
+  const items = (k.items || []).map(iid => {
+    const it = itemsCache[iid];
+    return it ? `${iid} (${it.type})` : iid;
+  }).join(", ");
+  preview.innerHTML = `<div style="padding:10px 12px; background:var(--panel-2); border-radius:8px; border:1px solid var(--line);">
+    <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Kit contents:</div>
+    <div style="font-size:13px;">${items}</div>
+  </div>`;
+});
+
+// Checkin mode toggle
+document.getElementById("checkinModeItem").addEventListener("click", ()=>{
+  document.getElementById("checkinItemWrap").style.display = "block";
+  document.getElementById("checkinKitWrap").style.display = "none";
+  document.getElementById("checkinModeItem").style.background = "var(--accent)";
+  document.getElementById("checkinModeItem").style.color = "#231a00";
+  document.getElementById("checkinModeItem").style.borderColor = "var(--accent)";
+  document.getElementById("checkinModeKit").style.background = "transparent";
+  document.getElementById("checkinModeKit").style.color = "var(--text)";
+  document.getElementById("checkinModeKit").style.borderColor = "var(--line)";
+});
+document.getElementById("checkinModeKit").addEventListener("click", ()=>{
+  document.getElementById("checkinItemWrap").style.display = "none";
+  document.getElementById("checkinKitWrap").style.display = "block";
+  document.getElementById("checkinModeKit").style.background = "var(--accent)";
+  document.getElementById("checkinModeKit").style.color = "#231a00";
+  document.getElementById("checkinModeKit").style.borderColor = "var(--accent)";
+  document.getElementById("checkinModeItem").style.background = "transparent";
+  document.getElementById("checkinModeItem").style.color = "var(--text)";
+  document.getElementById("checkinModeItem").style.borderColor = "var(--line)";
+  renderKitSelects();
+});
+
+document.getElementById("inKitSelect").addEventListener("change", (e)=>{
+  const kitId = e.target.value;
+  const preview = document.getElementById("kitPreviewIn");
+  const conditionsWrap = document.getElementById("kitItemConditions");
+  if (!kitId || !kitsCache[kitId]){
+    preview.innerHTML = "";
+    conditionsWrap.innerHTML = "";
+    return;
+  }
+  const k = kitsCache[kitId];
+  const items = (k.items || []).map(iid => {
+    const it = itemsCache[iid];
+    return it ? `${iid} (${it.type})` : iid;
+  }).join(", ");
+  preview.innerHTML = `<div style="padding:10px 12px; background:var(--panel-2); border-radius:8px; border:1px solid var(--line);">
+    <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Kit contents:</div>
+    <div style="font-size:13px;">${items}</div>
+  </div>`;
+  conditionsWrap.innerHTML = '<div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Mark condition for each item:</div>';
+  (k.items || []).forEach(itemId => {
+    const it = itemsCache[itemId];
+    const div = document.createElement("div");
+    div.style.cssText = "margin-bottom:10px; padding:10px; background:var(--panel-2); border-radius:8px;";
+    div.innerHTML = `
+      <div style="font-size:13px; font-weight:600; margin-bottom:6px;">${itemId} (${it ? it.type : ""})</div>
+      <select id="kitItemCond-${itemId}" style="margin-bottom:6px;">
+        <option value="OK">OK — working fine</option>
+        <option value="Damaged">Damaged</option>
+        <option value="Missing part">Missing part / accessory</option>
+      </select>
+      <input id="kitItemNote-${itemId}" placeholder="notes for this item (optional)" style="margin-top:0;">
+    `;
+    conditionsWrap.appendChild(div);
+  });
+});
 
 } // end initApp
 </script>
