@@ -2739,11 +2739,10 @@ if (currentRole === "admin"){
         new TableRow({
           children: [
             new TableCell({ children: [new Paragraph({ text: "S.No", bold: true })], width: { size: 8, type: WidthType.PERCENT } }),
-            new TableCell({ children: [new Paragraph({ text: "Item Description", bold: true })], width: { size: 32, type: WidthType.PERCENT } }),
-            new TableCell({ children: [new Paragraph({ text: "Serial / Model No.", bold: true })], width: { size: 20, type: WidthType.PERCENT } }),
+            new TableCell({ children: [new Paragraph({ text: "Item Description", bold: true })], width: { size: 40, type: WidthType.PERCENT } }),
+            new TableCell({ children: [new Paragraph({ text: "Serial / Model No.", bold: true })], width: { size: 22, type: WidthType.PERCENT } }),
             new TableCell({ children: [new Paragraph({ text: "Quantity", bold: true })], width: { size: 10, type: WidthType.PERCENT } }),
-            new TableCell({ children: [new Paragraph({ text: "Condition", bold: true })], width: { size: 15, type: WidthType.PERCENT } }),
-            new TableCell({ children: [new Paragraph({ text: "Remarks", bold: true })], width: { size: 15, type: WidthType.PERCENT } }),
+            new TableCell({ children: [new Paragraph({ text: "Remarks", bold: true })], width: { size: 20, type: WidthType.PERCENT } }),
           ]
         })
       ];
@@ -2782,14 +2781,16 @@ if (currentRole === "admin"){
 
       // Add serialized items first (DGPS with serial numbers) — listed individually
       serializedItems.forEach(it => {
+        const itemLabel = it.type === "DGPS" && it.manufacturer
+          ? `${it.id} (${it.manufacturer})`
+          : `${it.id} (${it.type})`;
         tableRows.push(new TableRow({
           children: [
             new TableCell({ children: [new Paragraph(String(sno++))] }),
-            new TableCell({ children: [new Paragraph(`${it.id} (${it.type})`)] }),
+            new TableCell({ children: [new Paragraph(itemLabel)] }),
             new TableCell({ children: [new Paragraph(it.serial || "N/A")] }),
             new TableCell({ children: [new Paragraph("1")] }),
-            new TableCell({ children: [new Paragraph(it.status)] }),
-            new TableCell({ children: [new Paragraph(it.currentHolder)] }),
+            new TableCell({ children: [new Paragraph("")] }),
           ]
         }));
       });
@@ -2800,8 +2801,6 @@ if (currentRole === "admin"){
           ? `${group.type} — ${group.description}`
           : (group.manufacturer ? `${group.type} (${group.manufacturer})` : group.type);
         const allIds = group.ids.join(", ");
-        const statusStr = Array.from(group.statuses).join(" / ");
-        const holdersStr = Array.from(group.holders).join(" / ");
 
         tableRows.push(new TableRow({
           children: [
@@ -2809,8 +2808,7 @@ if (currentRole === "admin"){
             new TableCell({ children: [new Paragraph(desc)] }),
             new TableCell({ children: [new Paragraph(allIds)] }),
             new TableCell({ children: [new Paragraph(String(group.count))] }),
-            new TableCell({ children: [new Paragraph(statusStr)] }),
-            new TableCell({ children: [new Paragraph(holdersStr)] }),
+            new TableCell({ children: [new Paragraph("")] }),
           ]
         }));
       });
@@ -2826,8 +2824,7 @@ if (currentRole === "admin"){
             new TableCell({ children: [new Paragraph(`${k.id} — Kit containing: ${itemsInside}`)] }),
             new TableCell({ children: [new Paragraph("N/A")] }),
             new TableCell({ children: [new Paragraph("1")] }),
-            new TableCell({ children: [new Paragraph(k.status)] }),
-            new TableCell({ children: [new Paragraph(k.currentHolder)] }),
+            new TableCell({ children: [new Paragraph("")] }),
           ]
         }));
       });
