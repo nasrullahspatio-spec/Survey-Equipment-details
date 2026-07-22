@@ -10,6 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <style>
   :root{
     --bg:#12181a;
@@ -781,6 +783,29 @@
     <div class="card">
       <h2>Users with access</h2>
       <div id="userList" class="item-list"><div class="empty">Loading…</div></div>
+    </div>
+
+    <div class="card">
+      <h2>District Equipment Receipt (DOCX)</h2>
+      <p style="font-size:12px; color:var(--muted); margin-top:0;">Generate a legal custody receipt for any district. Includes all items with serial numbers, status, and current holder.</p>
+      <label>Select District</label>
+      <select id="receiptDistrict">
+        <option value="">— select district —</option>
+        <option value="LHR">Lahore</option>
+        <option value="KSR">Kasur</option>
+        <option value="NKS">Nankana Sahib</option>
+        <option value="SKP">Sheikhupura</option>
+        <option value="GJT">Gujrat</option>
+        <option value="MBD">Mandi Bahauddin</option>
+        <option value="HFD">Hafizabad</option>
+        <option value="WZD">Wazirabad</option>
+        <option value="SGD">Sargodha</option>
+        <option value="KSB">Khushab</option>
+        <option value="MWL">Mianwali</option>
+        <option value="BKR">Bhakkar</option>
+      </select>
+      <button class="primary" id="btnGenerateReceipt" style="margin-top:12px;">Generate Receipt (DOCX)</button>
+      <div class="msg" id="receiptMsg"></div>
     </div>
   </section>
 
@@ -2558,6 +2583,203 @@ window.openFpLightbox = function(url) {
 document.getElementById("fpFilterDistrict").addEventListener("change", renderFpGallery);
 document.getElementById("fpFilterFrom").addEventListener("change", renderFpGallery);
 document.getElementById("fpFilterTo").addEventListener("change", renderFpGallery);
+
+// ---------- DISTRICT RECEIPT GENERATOR (admin only) ----------
+if (currentRole === "admin"){
+  document.getElementById("btnGenerateReceipt").addEventListener("click", async () => {
+    const district = document.getElementById("receiptDistrict").value;
+    const msg = document.getElementById("receiptMsg");
+    const btn = document.getElementById("btnGenerateReceipt");
+
+    if (!district) { showMsg("receiptMsg", "Select a district first.", false); return; }
+
+    btn.disabled = true;
+    btn.textContent = "Generating…";
+
+    try {
+      // Fetch all data for this district
+      const itemsSnap = await db.ref("items/" + district).once("value");
+      const districtItems = itemsSnap.val() || {};
+      const itemList = Object.entries(districtItems).map(([id, data]) => ({
+        id, ...data,
+        status: data.status || "In office",
+        currentHolder: data.status === "With surveyor" ? (data.currentSurveyor || "Unknown") : "District Office"
+      }));
+
+      const kitsSnap = await db.ref("kits/" + district).once("value");
+      const districtKits = kitsSnap.val() || {};
+      const kitList = Object.entries(districtKits).map(([id, data]) => ({
+        id, ...data,
+        status: data.status || "In office",
+        currentHolder: data.status === "With surveyor" ? (data.currentSurveyor || "Unknown") : "District Office"
+      }));
+
+      const surveyorsSnap = await db.ref("surveyors/" + district).once("value");
+      const districtSurveyors = surveyorsSnap.val() || {};
+      const surveyorCount = Object.keys(districtSurveyors).length;
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString("en-GB");
+      const refNum = `REC-${district}-${now.toISOString().slice(0,10).replace(/-/g,"")}-${String(now.getHours()).padStart(2,"0")}${String(now.getMinutes()).padStart(2,"0")}`;
+
+      const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, AlignmentType, BorderStyle, HeadingLevel, TextRun } = docx;
+
+      // Build item table rows
+      const itemRows = [
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ text: "Item ID", bold: true })], width: { size: 20, type: WidthType.PERCENT } }),
+            new TableCell({ children: [new Paragraph({ text: "Type", bold: true })], width: { size: 15, type: WidthType.PERCENT } }),
+            new TableCell({ children: [new Paragraph({ text: "Serial No.", bold: true })], width: { size: 20, type: WidthType.PERCENT } }),
+            new TableCell({ children: [new Paragraph({ text: "Manufacturer", bold: true })], width: { size: 15, type: WidthType.PERCENT } }),
+            new TableCell({ children: [new Paragraph({ text: "Status", bold: true })], width: { size: 15, type: WidthType.PERCENT } }),
+            new TableCell({ children: [new Paragraph({ text: "Current Holder", bold: true })], width: { size: 15, type: WidthType.PERCENT } }),
+          ]
+        })
+      ];
+
+      itemList.forEach(it => {
+        itemRows.push(new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph(it.id)] }),
+            new TableCell({ children: [new Paragraph(it.type || "-")] }),
+            new TableCell({ children: [new Paragraph(it.serial || "-")] }),
+            new TableCell({ children: [new Paragraph(it.manufacturer || "-")] }),
+            new TableCell({ children: [new Paragraph(it.status)] }),
+            new TableCell({ children: [new Paragraph(it.currentHolder)] }),
+          ]
+        }));
+      });
+
+      // Build kit table rows
+      const kitRows = [
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ text: "Kit ID", bold: true })], width: { size: 25, type: WidthType.PERCENT } }),
+            new TableCell({ children: [new Paragraph({ text: "Items Inside", bold: true })], width: { size: 35, type: WidthType.PERCENT } }),
+            new TableCell({ children: [new Paragraph({ text: "Status", bold: true })], width: { size: 20, type: WidthType.PERCENT } }),
+            new TableCell({ children: [new Paragraph({ text: "Current Holder", bold: true })], width: { size: 20, type: WidthType.PERCENT } }),
+          ]
+        })
+      ];
+
+      kitList.forEach(k => {
+        const itemsInside = (k.items || []).map(iid => {
+          const it = districtItems[iid];
+          return it ? `${iid} (${it.type})` : iid;
+        }).join(", ");
+        kitRows.push(new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph(k.id)] }),
+            new TableCell({ children: [new Paragraph(itemsInside || "-")] }),
+            new TableCell({ children: [new Paragraph(k.status)] }),
+            new TableCell({ children: [new Paragraph(k.currentHolder)] }),
+          ]
+        }));
+      });
+
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({
+              text: "EQUIPMENT CUSTODY RECEIPT",
+              heading: HeadingLevel.HEADING_1,
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 200 }
+            }),
+            new Paragraph({
+              text: districtName(district).toUpperCase() + " DISTRICT",
+              heading: HeadingLevel.HEADING_2,
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 200 }
+            }),
+            new Paragraph({ text: `Reference No: ${refNum}`, spacing: { after: 100 } }),
+            new Paragraph({ text: `Date: ${dateStr}`, spacing: { after: 100 } }),
+            new Paragraph({ text: `Total Surveyors Registered: ${surveyorCount}`, spacing: { after: 200 } }),
+
+            new Paragraph({
+              text: "LEGAL DECLARATION",
+              heading: HeadingLevel.HEADING_3,
+              spacing: { before: 200, after: 100 }
+            }),
+            new Paragraph({
+              text: `This is to certify that the following equipment listed herein is under the lawful custody of the ${districtName(district)} District Office as of ${dateStr}. All items are accounted for and their current status and location are accurately recorded below. This document serves as a legal record of equipment custody for audit, verification, and compliance purposes.`,
+              spacing: { after: 200 }
+            }),
+
+            new Paragraph({
+              text: `INDIVIDUAL ITEMS (${itemList.length})`,
+              heading: HeadingLevel.HEADING_3,
+              spacing: { before: 200, after: 100 }
+            }),
+            new Table({
+              rows: itemRows,
+              width: { size: 100, type: WidthType.PERCENT },
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 1 },
+                bottom: { style: BorderStyle.SINGLE, size: 1 },
+                left: { style: BorderStyle.SINGLE, size: 1 },
+                right: { style: BorderStyle.SINGLE, size: 1 },
+                insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+                insideVertical: { style: BorderStyle.SINGLE, size: 1 },
+              }
+            }),
+
+            new Paragraph({
+              text: `KITS (${kitList.length})`,
+              heading: HeadingLevel.HEADING_3,
+              spacing: { before: 300, after: 100 }
+            }),
+            new Table({
+              rows: kitRows,
+              width: { size: 100, type: WidthType.PERCENT },
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 1 },
+                bottom: { style: BorderStyle.SINGLE, size: 1 },
+                left: { style: BorderStyle.SINGLE, size: 1 },
+                right: { style: BorderStyle.SINGLE, size: 1 },
+                insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+                insideVertical: { style: BorderStyle.SINGLE, size: 1 },
+              }
+            }),
+
+            new Paragraph({ text: "", spacing: { before: 400 } }),
+            new Paragraph({ text: "AUTHORIZATION", heading: HeadingLevel.HEADING_3, spacing: { after: 200 } }),
+
+            new Paragraph({ text: "", spacing: { before: 300 } }),
+            new Paragraph({ text: "_______________________________", spacing: { after: 50 } }),
+            new Paragraph({ text: "District Manager Signature", spacing: { after: 300 } }),
+
+            new Paragraph({ text: "_______________________________", spacing: { after: 50 } }),
+            new Paragraph({ text: "Divisional Admin Signature", spacing: { after: 300 } }),
+
+            new Paragraph({ text: "_______________________________", spacing: { after: 50 } }),
+            new Paragraph({ text: `Date: ${dateStr}`, spacing: { after: 200 } }),
+
+            new Paragraph({
+              text: "This document is generated electronically by the Spatio Equipment Tracker system and serves as a legal record of equipment custody. Any discrepancy must be reported within 7 working days.",
+              spacing: { before: 300 },
+              italics: true,
+              size: 20
+            }),
+          ]
+        }]
+      });
+
+      const blob = await Packer.toBlob(doc);
+      saveAs(blob, `${district}-Equipment-Receipt-${now.toISOString().slice(0,10)}.docx`);
+
+      showMsg("receiptMsg", `Receipt generated: ${itemList.length} items, ${kitList.length} kits.`, true);
+    } catch (err) {
+      showMsg("receiptMsg", "Error: " + err.message, false);
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Generate Receipt (DOCX)";
+    }
+  });
+}
 
 
 } // end initApp
