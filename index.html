@@ -839,7 +839,13 @@
       <input id="receiptCustodianPhone" placeholder="03xx-xxxxxxx">
 
       <label>Designation of Handing-Over Party (Spatio Head Office)</label>
-      <input id="receiptHandoverDesignation" placeholder="e.g. Project Manager, Operations Head">
+      <select id="receiptHandoverDesignation">
+        <option value="">— select designation —</option>
+        <option value="GIS Manager">GIS Manager</option>
+        <option value="Divisional Coordinator">Divisional Coordinator</option>
+        <option value="Other">Other</option>
+      </select>
+      <input id="receiptHandoverDesignationOther" placeholder="Type other designation" style="margin-top:6px; display:none;">
 
       <button class="primary" id="btnGenerateReceipt" style="margin-top:12px;">Generate Handover Document (DOCX)</button>
       <div class="msg" id="receiptMsg"></div>
@@ -2657,6 +2663,13 @@ if (currentRole === "admin"){
     }
   });
 
+  const handoverDesignationSel = document.getElementById("receiptHandoverDesignation");
+  const handoverDesignationOther = document.getElementById("receiptHandoverDesignationOther");
+  handoverDesignationSel.addEventListener("change", () => {
+    handoverDesignationOther.style.display = handoverDesignationSel.value === "Other" ? "block" : "none";
+    if (handoverDesignationSel.value !== "Other") handoverDesignationOther.value = "";
+  });
+
   document.getElementById("btnGenerateReceipt").addEventListener("click", async () => {
     const docxLib = window.docx || (typeof docx !== "undefined" ? docx : null);
     if (!docxLib) {
@@ -2669,7 +2682,10 @@ if (currentRole === "admin"){
     const custodianDesignation = document.getElementById("receiptCustodianDesignation").value.trim();
     const custodianCnic = document.getElementById("receiptCustodianCnic").value.trim();
     const custodianPhone = document.getElementById("receiptCustodianPhone").value.trim();
-    const handoverDesignation = document.getElementById("receiptHandoverDesignation").value.trim();
+    const handoverDesignationSelValue = document.getElementById("receiptHandoverDesignation").value.trim();
+    const handoverDesignation = handoverDesignationSelValue === "Other"
+      ? document.getElementById("receiptHandoverDesignationOther").value.trim()
+      : handoverDesignationSelValue;
 
     const msg = document.getElementById("receiptMsg");
     const btn = document.getElementById("btnGenerateReceipt");
@@ -2877,15 +2893,47 @@ if (currentRole === "admin"){
               bold: true
             }),
 
-            // Declaration
+            // Terms & Conditions
             new Paragraph({
-              text: "DECLARATION",
+              text: "TERMS & CONDITIONS",
               heading: HeadingLevel.HEADING_2,
               spacing: { before: 200, after: 100 },
               bold: true
             }),
             new Paragraph({
-              text: `This document certifies that the equipment listed below has been formally handed over to ${custodianName}, ${custodianDesignation}, on ${dateStr} for the ${districtName(district)} District under the Green Property Certificate (GPC) Project. The receiving custodian acknowledges receipt of all items in the condition stated and assumes full responsibility for their safekeeping, maintenance, and return as per project guidelines.`,
+              text: "1. The receiver accepts full responsibility for the safekeeping, storage, and control of the equipment listed in this document.",
+              spacing: { after: 80 }
+            }),
+            new Paragraph({
+              text: "2. No item shall be transferred, lent, assigned, or handed over to any third person, office, or organization without prior written approval from The Spatio.",
+              spacing: { after: 80 }
+            }),
+            new Paragraph({
+              text: "3. The equipment shall be used only for the stated district/project purpose and for no other purpose.",
+              spacing: { after: 80 }
+            }),
+            new Paragraph({
+              text: "4. The receiver shall keep the equipment in safe custody and protect it from loss, theft, misuse, or damage.",
+              spacing: { after: 80 }
+            }),
+            new Paragraph({
+              text: "5. Any loss, damage, discrepancy, or unauthorized transfer shall be reported to The Spatio immediately.",
+              spacing: { after: 80 }
+            }),
+            new Paragraph({
+              text: "6. The receiver shall present the equipment for inspection whenever required and shall return it on demand or upon completion of project use.",
+              spacing: { after: 80 }
+            }),
+            new Paragraph({
+              text: "7. The equipment shall remain subject to inspection, audit, and verification by The Spatio or any authorized representative at any time.",
+              spacing: { after: 80 }
+            }),
+            new Paragraph({
+              text: "8. Any breach of these conditions shall make the receiver personally responsible and liable for recovery, disciplinary, and legal action as applicable.",
+              spacing: { after: 140 }
+            }),
+            new Paragraph({
+              text: `I hereby acknowledge that I have received the equipment listed below for the ${districtName(district)} District and that I am personally responsible for its safe custody, return, and compliance with the above terms. I also confirm that I shall not hand over any equipment to any third person without written approval from The Spatio.`,
               spacing: { after: 200 }
             }),
 
@@ -2931,7 +2979,10 @@ if (currentRole === "admin"){
               spacing: { after: 50 }
             }),
             new Paragraph({ text: `Name: _______________________________` }),
-            new Paragraph({ text: `Designation: ${handoverDesignation}`, spacing: { after: 200 } }),
+            new Paragraph({ text: `Designation: ${handoverDesignation}`, spacing: { after: 50 } }),
+            new Paragraph({ text: `CNIC: _______________________________` }),
+            new Paragraph({ text: `Contact: _______________________________` }),
+            new Paragraph({ text: `Organization: The Spatio — Geospatial Engineering Consultants`, spacing: { after: 200 } }),
             new Paragraph({ text: `Signature: _______________________________`, spacing: { after: 300 } }),
 
             new Paragraph({
@@ -2945,20 +2996,11 @@ if (currentRole === "admin"){
             new Paragraph({ text: `Contact: ${custodianPhone || "N/A"}`, spacing: { after: 200 } }),
             new Paragraph({ text: `Signature: _______________________________`, spacing: { after: 300 } }),
 
-            new Paragraph({
-              text: "Witness:",
-              bold: true,
-              spacing: { after: 50 }
-            }),
-            new Paragraph({ text: `Name: _______________________________` }),
-            new Paragraph({ text: `Designation: GIS Manager / Divisional Coordinator`, spacing: { after: 200 } }),
-            new Paragraph({ text: `Signature: _______________________________`, spacing: { after: 300 } }),
-
             new Paragraph({ text: `Date of Handover: ${dateStr}`, spacing: { after: 200 } }),
 
             // Footer
             new Paragraph({
-              text: "This document is generated electronically by the Spatio Equipment Tracker system. Any discrepancy, damage, or loss must be reported within 7 working days of receipt. The receiving custodian is fully liable for the equipment from the date of signature.",
+              text: "This document is generated electronically by the Spatio Equipment Tracker system. Any discrepancy, damage, loss, or unauthorized transfer must be reported immediately. The receiver remains fully liable from the date of signature.",
               spacing: { before: 300 },
               italics: true,
               size: 20
