@@ -847,6 +847,15 @@
       </select>
       <input id="receiptHandoverDesignationOther" placeholder="Type other designation" style="margin-top:6px; display:none;">
 
+      <label>Name of Handing-Over Party</label>
+      <input id="receiptHandoverName" placeholder="Enter name manually">
+
+      <label>CNIC of Handing-Over Party</label>
+      <input id="receiptHandoverCnic" placeholder="Enter CNIC manually">
+
+      <label>Contact No. of Handing-Over Party</label>
+      <input id="receiptHandoverPhone" placeholder="Enter contact manually">
+
       <button class="primary" id="btnGenerateReceipt" style="margin-top:12px;">Generate Handover Document (DOCX)</button>
       <div class="msg" id="receiptMsg"></div>
     </div>
@@ -2686,6 +2695,9 @@ if (currentRole === "admin"){
     const handoverDesignation = handoverDesignationSelValue === "Other"
       ? document.getElementById("receiptHandoverDesignationOther").value.trim()
       : handoverDesignationSelValue;
+    const handoverName = document.getElementById("receiptHandoverName").value.trim();
+    const handoverCnic = document.getElementById("receiptHandoverCnic").value.trim();
+    const handoverPhone = document.getElementById("receiptHandoverPhone").value.trim();
 
     const msg = document.getElementById("receiptMsg");
     const btn = document.getElementById("btnGenerateReceipt");
@@ -2694,6 +2706,9 @@ if (currentRole === "admin"){
     if (!custodianName) { showMsg("receiptMsg", "Enter the receiving custodian name.", false); return; }
     if (!custodianDesignation) { showMsg("receiptMsg", "Enter the designation of receiving custodian.", false); return; }
     if (!handoverDesignation) { showMsg("receiptMsg", "Enter the designation of handing-over party.", false); return; }
+    if (!handoverName) { showMsg("receiptMsg", "Enter the name of handing-over party.", false); return; }
+    if (!handoverCnic) { showMsg("receiptMsg", "Enter the CNIC of handing-over party.", false); return; }
+    if (!handoverPhone) { showMsg("receiptMsg", "Enter the contact number of handing-over party.", false); return; }
 
     btn.disabled = true;
     btn.textContent = "Generating…";
@@ -2975,10 +2990,10 @@ if (currentRole === "admin"){
               bold: true,
               spacing: { after: 50 }
             }),
-            new Paragraph({ text: `Name: _______________________________` }),
+            new Paragraph({ text: `Name: ${handoverName}` }),
             new Paragraph({ text: `Designation: ${handoverDesignation}`, spacing: { after: 50 } }),
-            new Paragraph({ text: `CNIC: _______________________________` }),
-            new Paragraph({ text: `Contact: _______________________________` }),
+            new Paragraph({ text: `CNIC: ${handoverCnic}` }),
+            new Paragraph({ text: `Contact: ${handoverPhone}` }),
             new Paragraph({ text: `Organization: The Spatio — Geospatial Engineering Consultants`, spacing: { after: 200 } }),
             new Paragraph({ text: `Signature: _______________________________`, spacing: { after: 300 } }),
 
