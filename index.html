@@ -842,6 +842,71 @@ document.getElementById("btnLogout").addEventListener("click", ()=>{
 
 function initApp(){
 
+// ---------- DISTRICT-BASED DATA HELPERS ----------
+// For admin: Firebase returns {LHR: {...}, SKP: {...}} — flatten to {LHR-DGPS-01: {...}}
+// For manager: Firebase already returns flat {LHR-DGPS-01: {...}}
+function normalizeItems(snapVal){
+  if (!snapVal) return {};
+  if (currentRole === "manager") return snapVal; // already flat
+  // Admin: merge all districts
+  const merged = {};
+  Object.entries(snapVal).forEach(([district, items]) => {
+    if (typeof items === 'object' && items !== null) {
+      Object.entries(items).forEach(([id, data]) => { merged[id] = data; });
+    }
+  });
+  return merged;
+}
+function normalizeSurveyors(snapVal){
+  if (!snapVal) return {};
+  if (currentRole === "manager") return snapVal;
+  const merged = {};
+  Object.entries(snapVal).forEach(([district, surveyors]) => {
+    if (typeof surveyors === 'object' && surveyors !== null) {
+      Object.entries(surveyors).forEach(([id, data]) => { merged[id] = data; });
+    }
+  });
+  return merged;
+}
+function normalizeTransactions(snapVal){
+  if (!snapVal) return {};
+  if (currentRole === "manager") return snapVal;
+  const merged = {};
+  Object.entries(snapVal).forEach(([district, txs]) => {
+    if (typeof txs === 'object' && txs !== null) {
+      Object.entries(txs).forEach(([id, data]) => { merged[id] = data; });
+    }
+  });
+  return merged;
+}
+function normalizeKits(snapVal){
+  if (!snapVal) return {};
+  if (currentRole === "manager") return snapVal;
+  const merged = {};
+  Object.entries(snapVal).forEach(([district, kits]) => {
+    if (typeof kits === 'object' && kits !== null) {
+      Object.entries(kits).forEach(([id, data]) => { merged[id] = data; });
+    }
+  });
+  return merged;
+}
+// Build write path: admin writes to items/LHR/LHR-DGPS-01, manager writes to items/LHR/LHR-DGPS-01
+function itemPath(itemId){
+  const district = itemId.split("-")[0];
+  return "items/" + district + "/" + itemId;
+}
+function surveyorPath(surveyorId, district){
+  return "surveyors/" + district + "/" + surveyorId;
+}
+function txPath(txId, district){
+  return "transactions/" + district + "/" + txId;
+}
+function kitPath(kitId){
+  const district = kitId.split("-")[0];
+  return "kits/" + district + "/" + kitId;
+}
+
+
 if (currentRole === "manager"){
   ["newDistrict","itemDistrictFilter","newSurveyorDistrict","autoUserDistrict","newUserDistrict"].forEach(id=>{
     const el = document.getElementById(id);
@@ -877,8 +942,9 @@ function showMsg(id, text, ok){
 // ---------- SURVEYORS ----------
 let surveyorsCache = {};
 
-db.ref("surveyors").on("value", snap=>{
-  surveyorsCache = snap.val() || {};
+const surveyorsRefPath = currentRole === "admin" ? "surveyors" : "surveyors/" + currentDistrict;
+db.ref(surveyorsRefPath).on("value", snap=>{
+  surveyorsCache = normalizeSurveyors(snap.val()) || {};
   renderSurveyorList();
   renderOutSurveyorSelect();
 });
@@ -916,7 +982,7 @@ function renderSurveyorList(){
         return;
       }
       if (confirm(`Remove ${name} from the surveyor list? Past history under their name is kept.`)){
-        db.ref("surveyors/"+id).remove().catch(e=>alert("Error: "+e.message));
+        db.ref(surveyorPath(id, surveyorsCache[id].district)).remove().catch(e=>alert("Error: "+e.message));
       }
     });
   });
@@ -979,7 +1045,7 @@ document.getElementById("btnAddSurveyor").addEventListener("click", ()=>{
   const alreadyExists = Object.values(surveyorsCache).some(s => s.cnic === cnicFormatted);
   if (alreadyExists){ showMsg("surveyorMsg", `This CNIC is already registered to a surveyor on the list.`, false); return; }
 
-  db.ref("surveyors").push({ name, district, cnic: cnicFormatted, phone: phone || null, addedDate: new Date().toISOString() })
+  db.ref("surveyors/" + district).push({ name, district, cnic: cnicFormatted, phone: phone || null, addedDate: new Date().toISOString() })
     .then(()=>{
       showMsg("surveyorMsg", `${name} added.`, true);
       document.getElementById("newSurveyorName").value = "";
@@ -991,8 +1057,9 @@ document.getElementById("btnAddSurveyor").addEventListener("click", ()=>{
 // ---------- ITEMS ----------
 let itemsCache = {};
 
-db.ref("items").on("value", snap=>{
-  itemsCache = snap.val() || {};
+const itemsRefPath = currentRole === "admin" ? "items" : "items/" + currentDistrict;
+db.ref(itemsRefPath).on("value", snap=>{
+  itemsCache = normalizeItems(snap.val()) || {};
   renderItemMaster();
   renderOutSelect();
   renderInSelect();
@@ -1088,7 +1155,7 @@ function renderItemMaster(){
       } else {
         updates.description = null;
       }
-      db.ref("items/"+id).update(updates).then(()=>{
+      db.ref(itemPath(id)).update(updates).then(()=>{
         editingId = null;
         renderItemMaster();
       }).catch(e=>alert("Error saving: "+e.message));
@@ -1105,7 +1172,7 @@ function renderItemMaster(){
         return;
       }
       if (confirm(`Delete ${id} permanently? Past transaction history for this item will be kept for records, but the item itself will be removed from the active list.`)){
-        db.ref("items/"+id).remove().catch(e=>alert("Error deleting: "+e.message));
+        db.ref(itemPath(id)).remove().catch(e=>alert("Error deleting: "+e.message));
       }
     });
   });
@@ -1154,7 +1221,7 @@ document.getElementById("btnAddItem").addEventListener("click", ()=>{
     data.description = description || null;
   }
 
-  db.ref("items/"+itemId).set(data).then(()=>{
+  db.ref(itemPath(itemId)).set(data).then(()=>{
     showMsg("addMsg", `Added ${itemId}. Use "Print QR labels" below to print it.`, true);
     document.getElementById("newNumber").value = "";
     document.getElementById("newSerial").value = "";
@@ -1352,14 +1419,14 @@ function renderOutList(){
         const txId = it.openTxId;
         const updates = {};
         if (isKit){
-          updates["kits/"+id+"/lastVerified"] = today;
-          updates["kits/"+id+"/lastVerifiedStatus"] = status;
+          updates["kits/"+id.split("-")[0]+"/"+id+"/lastVerified"] = today;
+          updates["kits/"+id.split("-")[0]+"/"+id+"/lastVerifiedStatus"] = status;
         } else {
-          updates["items/"+id+"/lastVerified"] = today;
-          updates["items/"+id+"/lastVerifiedStatus"] = status;
+          updates["items/"+id.split("-")[0]+"/"+id+"/lastVerified"] = today;
+          updates["items/"+id.split("-")[0]+"/"+id+"/lastVerifiedStatus"] = status;
         }
         if (txId){
-          const vRef = db.ref("transactions/"+txId+"/verifications").push();
+          const vRef = db.ref("transactions/"+txCache[txId].district+"/"+txId+"/verifications").push();
           vRef.set({ date: today, status, notes: notes || null });
         }
         db.ref().update(updates).then(()=>{
@@ -1396,7 +1463,7 @@ document.getElementById("btnCheckout").addEventListener("click", ()=>{
     const kit = kitsCache[kitId];
     const txRef = db.ref("transactions").push();
     const updates = {};
-    updates["transactions/"+txRef.key] = {
+    updates["transactions/"+district+"/"+txRef.key] = {
       kitId, surveyor,
       district: kit.district,
       custodyType,
@@ -1410,19 +1477,19 @@ document.getElementById("btnCheckout").addEventListener("click", ()=>{
       isKit: true
     };
     (kit.items || []).forEach(itemId => {
-      updates["items/"+itemId+"/status"] = "With surveyor";
-      updates["items/"+itemId+"/currentSurveyor"] = surveyor;
-      updates["items/"+itemId+"/custodyType"] = custodyType;
-      updates["items/"+itemId+"/expectedReturn"] = custodyType === "extended" ? returnDate : null;
-      updates["items/"+itemId+"/affidavit"] = custodyType === "extended" ? affidavit : null;
-      updates["items/"+itemId+"/openTxId"] = txRef.key;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/status"] = "With surveyor";
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/currentSurveyor"] = surveyor;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/custodyType"] = custodyType;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/expectedReturn"] = custodyType === "extended" ? returnDate : null;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/affidavit"] = custodyType === "extended" ? affidavit : null;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/openTxId"] = txRef.key;
     });
-    updates["kits/"+kitId+"/status"] = "With surveyor";
-    updates["kits/"+kitId+"/currentSurveyor"] = surveyor;
-    updates["kits/"+kitId+"/custodyType"] = custodyType;
-    updates["kits/"+kitId+"/expectedReturn"] = custodyType === "extended" ? returnDate : null;
-    updates["kits/"+kitId+"/affidavit"] = custodyType === "extended" ? affidavit : null;
-    updates["kits/"+kitId+"/openTxId"] = txRef.key;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/status"] = "With surveyor";
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/currentSurveyor"] = surveyor;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/custodyType"] = custodyType;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/expectedReturn"] = custodyType === "extended" ? returnDate : null;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/affidavit"] = custodyType === "extended" ? affidavit : null;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/openTxId"] = txRef.key;
     db.ref().update(updates).then(()=>{
       showMsg("outMsg", `${kitId} checked out to ${surveyor} (${custodyType === "extended" ? "extended custody" : "daily"}).`, true);
       document.getElementById("outKitSelect").value = "";
@@ -1450,7 +1517,7 @@ document.getElementById("btnCheckout").addEventListener("click", ()=>{
       notesOut: notes || null,
       status: "out"
     }).then(()=>{
-      return db.ref("items/"+itemId).update({
+      return db.ref(itemPath(itemId)).update({
         status: "With surveyor",
         currentSurveyor: surveyor,
         custodyType,
@@ -1505,30 +1572,30 @@ document.getElementById("btnCheckin").addEventListener("click", ()=>{
     const kitStatus = hasIssue ? "Partial return" : "In office";
     const updates = {};
     if (txId){
-      updates["transactions/"+txId+"/checkInTime"] = new Date().toISOString();
-      updates["transactions/"+txId+"/status"] = "closed";
-      updates["transactions/"+txId+"/kitConditions"] = itemConditions;
+      updates["transactions/"+txCache[txId].district+"/"+txId+"/checkInTime"] = new Date().toISOString();
+      updates["transactions/"+txCache[txId].district+"/"+txId+"/status"] = "closed";
+      updates["transactions/"+txCache[txId].district+"/"+txId+"/kitConditions"] = itemConditions;
     }
     (kit.items || []).forEach(itemId => {
       const cond = itemConditions[itemId].condition;
       const newStatus = cond === "OK" ? "In office" : "Under repair";
-      updates["items/"+itemId+"/status"] = newStatus;
-      updates["items/"+itemId+"/currentSurveyor"] = null;
-      updates["items/"+itemId+"/openTxId"] = null;
-      updates["items/"+itemId+"/custodyType"] = null;
-      updates["items/"+itemId+"/expectedReturn"] = null;
-      updates["items/"+itemId+"/affidavit"] = null;
-      updates["items/"+itemId+"/lastVerified"] = null;
-      updates["items/"+itemId+"/lastVerifiedStatus"] = null;
-      updates["items/"+itemId+"/checkInCondition"] = cond;
-      updates["items/"+itemId+"/checkInNote"] = itemConditions[itemId].note;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/status"] = newStatus;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/currentSurveyor"] = null;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/openTxId"] = null;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/custodyType"] = null;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/expectedReturn"] = null;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/affidavit"] = null;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/lastVerified"] = null;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/lastVerifiedStatus"] = null;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/checkInCondition"] = cond;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/checkInNote"] = itemConditions[itemId].note;
     });
-    updates["kits/"+kitId+"/status"] = kitStatus;
-    updates["kits/"+kitId+"/currentSurveyor"] = null;
-    updates["kits/"+kitId+"/openTxId"] = null;
-    updates["kits/"+kitId+"/custodyType"] = null;
-    updates["kits/"+kitId+"/expectedReturn"] = null;
-    updates["kits/"+kitId+"/affidavit"] = null;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/status"] = kitStatus;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/currentSurveyor"] = null;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/openTxId"] = null;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/custodyType"] = null;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/expectedReturn"] = null;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/affidavit"] = null;
     db.ref().update(updates).then(()=>{
       const msg = hasIssue ? `${kitId} checked in — some items need attention.` : `${kitId} checked in — all items OK.`;
       showMsg("inMsg", msg, !hasIssue);
@@ -1546,19 +1613,19 @@ document.getElementById("btnCheckin").addEventListener("click", ()=>{
     const newStatus = condition === "OK" ? "In office" : "Under repair";
     const updates = {};
     if (txId){
-      updates["transactions/"+txId+"/checkInTime"] = new Date().toISOString();
-      updates["transactions/"+txId+"/condition"] = condition;
-      updates["transactions/"+txId+"/notesIn"] = notes || null;
-      updates["transactions/"+txId+"/status"] = "closed";
+      updates["transactions/"+txCache[txId].district+"/"+txId+"/checkInTime"] = new Date().toISOString();
+      updates["transactions/"+txCache[txId].district+"/"+txId+"/condition"] = condition;
+      updates["transactions/"+txCache[txId].district+"/"+txId+"/notesIn"] = notes || null;
+      updates["transactions/"+txCache[txId].district+"/"+txId+"/status"] = "closed";
     }
-    updates["items/"+itemId+"/status"] = newStatus;
-    updates["items/"+itemId+"/currentSurveyor"] = null;
-    updates["items/"+itemId+"/openTxId"] = null;
-    updates["items/"+itemId+"/custodyType"] = null;
-    updates["items/"+itemId+"/expectedReturn"] = null;
-    updates["items/"+itemId+"/affidavit"] = null;
-    updates["items/"+itemId+"/lastVerified"] = null;
-    updates["items/"+itemId+"/lastVerifiedStatus"] = null;
+    updates["items/"+itemId.split("-")[0]+"/"+itemId+"/status"] = newStatus;
+    updates["items/"+itemId.split("-")[0]+"/"+itemId+"/currentSurveyor"] = null;
+    updates["items/"+itemId.split("-")[0]+"/"+itemId+"/openTxId"] = null;
+    updates["items/"+itemId.split("-")[0]+"/"+itemId+"/custodyType"] = null;
+    updates["items/"+itemId.split("-")[0]+"/"+itemId+"/expectedReturn"] = null;
+    updates["items/"+itemId.split("-")[0]+"/"+itemId+"/affidavit"] = null;
+    updates["items/"+itemId.split("-")[0]+"/"+itemId+"/lastVerified"] = null;
+    updates["items/"+itemId.split("-")[0]+"/"+itemId+"/lastVerifiedStatus"] = null;
     db.ref().update(updates).then(()=>{
       showMsg("inMsg", `${itemId} checked in — marked ${newStatus}.`, true);
       document.getElementById("inNotes").value = "";
@@ -1598,8 +1665,9 @@ setupScanner("startScanIn","qr-reader-in","inItemSelect");
 
 // ---------- HISTORY ----------
 let txCache = {};
-db.ref("transactions").on("value", snap=>{
-  txCache = snap.val() || {};
+const txRefPath = currentRole === "admin" ? "transactions" : "transactions/" + currentDistrict;
+db.ref(txRefPath).on("value", snap=>{
+  txCache = normalizeTransactions(snap.val()) || {};
   renderHistory();
 });
 
@@ -1795,8 +1863,9 @@ if (currentRole === "admin"){
 let kitsCache = {};
 let kitDraftItems = [];
 
-db.ref("kits").on("value", snap=>{
-  kitsCache = snap.val() || {};
+const kitsRefPath = currentRole === "admin" ? "kits" : "kits/" + currentDistrict;
+db.ref(kitsRefPath).on("value", snap=>{
+  kitsCache = normalizeKits(snap.val()) || {};
   renderKitList();
   renderKitSelects();
 });
@@ -1882,8 +1951,8 @@ document.getElementById("btnCreateKit").addEventListener("click", ()=>{
     createdDate: new Date().toISOString()
   };
   const updates = {};
-  updates["kits/"+kitId] = kitData;
-  itemIds.forEach(id => { updates["items/"+id+"/inKit"] = kitId; });
+  updates["kits/"+kitId.split("-")[0]+"/"+kitId] = kitData;
+  itemIds.forEach(id => { updates["items/"+id.split("-")[0]+"/"+id+"/inKit"] = kitId; });
   db.ref().update(updates).then(()=>{
     showMsg("kitMsg", `Created ${kitId} with ${itemIds.length} items.`, true);
     kitDraftItems = [];
@@ -1935,8 +2004,8 @@ function renderKitList(){
       if (!confirm(`Delete ${kitId}? Items inside will become available again.`)) return;
       const k = kitsCache[kitId];
       const updates = {};
-      updates["kits/"+kitId] = null;
-      (k.items || []).forEach(id => { updates["items/"+id+"/inKit"] = null; });
+      updates["kits/"+kitId.split("-")[0]+"/"+kitId] = null;
+      (k.items || []).forEach(id => { updates["items/"+id.split("-")[0]+"/"+id+"/inKit"] = null; });
       db.ref().update(updates).catch(e=>alert("Error: "+e.message));
     });
   });
