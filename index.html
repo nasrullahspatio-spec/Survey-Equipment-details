@@ -113,6 +113,99 @@
     #qr-print{flex-wrap:wrap; gap:12px;}
   }
 
+  /* Field Proof Gallery */
+  .fp-card{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:12px;
+    margin-bottom:12px;
+  }
+  .fp-card .header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:10px;
+    gap:10px;
+  }
+  .fp-card .meta{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.5;
+  }
+  .fp-card .meta b{
+    color:var(--text);
+  }
+  .fp-card .images{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));
+    gap:8px;
+    margin-top:10px;
+  }
+  .fp-card .images img{
+    width:100%;
+    height:120px;
+    object-fit:cover;
+    border-radius:6px;
+    border:1px solid var(--line);
+    cursor:pointer;
+    transition:transform 0.15s;
+  }
+  .fp-card .images img:hover{
+    transform:scale(1.03);
+    border-color:var(--accent);
+  }
+  .fp-card .caption{
+    font-size:13px;
+    color:var(--text);
+    margin-top:8px;
+    font-style:italic;
+  }
+  .fp-preview-thumb{
+    width:80px;
+    height:80px;
+    object-fit:cover;
+    border-radius:6px;
+    border:1px solid var(--line);
+  }
+  .fp-lightbox{
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,0.9);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    padding:20px;
+  }
+  .fp-lightbox img{
+    max-width:90vw;
+    max-height:90vh;
+    border-radius:8px;
+  }
+  .fp-lightbox .close{
+    position:absolute;
+    top:20px; right:20px;
+    color:#fff;
+    font-size:28px;
+    cursor:pointer;
+    background:none;
+    border:none;
+  }
+  .fp-delete-btn{
+    background:none;
+    border:1px solid var(--bad);
+    color:var(--bad);
+    border-radius:6px;
+    padding:4px 10px;
+    font-size:12px;
+    cursor:pointer;
+  }
+  .fp-delete-btn:hover{
+    background:var(--bad);
+    color:#fff;
+  }
+
   /* Realistic Survey Equipment Loader */
   .survey-loader{position:relative;}
   .survey-svg{filter:drop-shadow(0 8px 24px rgba(0,0,0,0.5));}
@@ -291,6 +384,7 @@
   <button data-tab="kits">Kits</button>
   <button data-tab="surveyors">Surveyors</button>
   <button data-tab="history">History</button>
+  <button data-tab="fieldproof">Field Proof</button>
   <button data-tab="users" id="navUsers" style="display:none;">Users</button>
 </nav>
 
@@ -740,6 +834,82 @@
     </div>
   </section>
 
+
+  <!-- FIELD PROOF -->
+  <section id="tab-fieldproof">
+    <div class="card">
+      <h2>Daily Field Proof — Upload</h2>
+      <div class="row">
+        <div>
+          <label>Report Date</label>
+          <input id="fpDate" type="date">
+        </div>
+        <div>
+          <label>District</label>
+          <select id="fpDistrict">
+            <option value="LHR">Lahore</option>
+            <option value="KSR">Kasur</option>
+            <option value="NKS">Nankana Sahib</option>
+            <option value="SKP">Sheikhupura</option>
+            <option value="GJT">Gujrat</option>
+            <option value="MBD">Mandi Bahauddin</option>
+            <option value="HFD">Hafizabad</option>
+            <option value="WZD">Wazirabad</option>
+            <option value="SGD">Sargodha</option>
+            <option value="KSB">Khushab</option>
+            <option value="MWL">Mianwali</option>
+            <option value="BKR">Bhakkar</option>
+          </select>
+        </div>
+      </div>
+      <label>Mauza / Location</label>
+      <input id="fpMauza" placeholder="e.g. Mauza Chak 123, Tehsil Faisalabad">
+
+      <label>Upload Images</label>
+      <input id="fpFiles" type="file" accept="image/*" multiple style="padding:8px 0;">
+      <div id="fpPreviewWrap" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
+
+      <label>Caption / Notes</label>
+      <input id="fpCaption" placeholder="e.g. Boundary survey in progress, team on site">
+
+      <button class="primary" id="btnFpUpload">Upload Field Proof</button>
+      <div class="msg" id="fpMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Field Proof Gallery</h2>
+      <div class="row">
+        <div>
+          <label>Filter by District</label>
+          <select id="fpFilterDistrict">
+            <option value="">All districts</option>
+            <option value="LHR">Lahore</option>
+            <option value="KSR">Kasur</option>
+            <option value="NKS">Nankana Sahib</option>
+            <option value="SKP">Sheikhupura</option>
+            <option value="GJT">Gujrat</option>
+            <option value="MBD">Mandi Bahauddin</option>
+            <option value="HFD">Hafizabad</option>
+            <option value="WZD">Wazirabad</option>
+            <option value="SGD">Sargodha</option>
+            <option value="KSB">Khushab</option>
+            <option value="MWL">Mianwali</option>
+            <option value="BKR">Bhakkar</option>
+          </select>
+        </div>
+        <div>
+          <label>From Date</label>
+          <input id="fpFilterFrom" type="date">
+        </div>
+        <div>
+          <label>To Date</label>
+          <input id="fpFilterTo" type="date">
+        </div>
+      </div>
+      <div id="fpGallery" style="margin-top:14px;"><div class="empty">Loading…</div></div>
+    </div>
+  </section>
+
 </main>
 
 </div>
@@ -757,6 +927,24 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
+
+// ---------- CLOUDINARY CONFIG ----------
+const CLOUDINARY_CLOUD_NAME = "uacj2hak";
+const CLOUDINARY_UPLOAD_PRESET = "Field-proof";
+
+async function uploadToCloudinary(file) {
+  const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  formData.append("folder", "spatio-field-proof");
+
+  const res = await fetch(url, { method: "POST", body: formData });
+  if (!res.ok) throw new Error("Upload failed: " + res.statusText);
+  const data = await res.json();
+  return { url: data.secure_url, publicId: data.public_id };
+}
+
 
 // ---------- AUTH GATE ----------
 let appInitialized = false;
@@ -2184,6 +2372,193 @@ document.getElementById("inKitSelect").addEventListener("change", (e)=>{
     conditionsWrap.appendChild(div);
   });
 });
+
+
+// ---------- FIELD PROOF ----------
+const fpRefPath = currentRole === "admin" ? "fieldProof" : "fieldProof/" + currentDistrict;
+db.ref(fpRefPath).on("value", snap => {
+  renderFpGallery();
+});
+
+// Set default date to today
+document.getElementById("fpDate").value = new Date().toISOString().slice(0,10);
+
+// Lock district for manager
+if (currentRole === "manager"){
+  const fpDistrict = document.getElementById("fpDistrict");
+  const fpFilterDistrict = document.getElementById("fpFilterDistrict");
+
+  // Lock upload district
+  const opts = [...fpDistrict.options];
+  opts.forEach(opt => {
+    if (opt.value !== "" && opt.value !== currentDistrict) {
+      fpDistrict.removeChild(opt);
+    }
+  });
+  fpDistrict.value = currentDistrict;
+  fpDistrict.disabled = true;
+
+  // Lock filter district
+  const filterOpts = [...fpFilterDistrict.options];
+  filterOpts.forEach(opt => {
+    if (opt.value !== "" && opt.value !== currentDistrict) {
+      fpFilterDistrict.removeChild(opt);
+    }
+  });
+  fpFilterDistrict.value = currentDistrict;
+}
+
+// Preview selected files
+document.getElementById("fpFiles").addEventListener("change", (e) => {
+  const wrap = document.getElementById("fpPreviewWrap");
+  wrap.innerHTML = "";
+  const files = Array.from(e.target.files).slice(0, 10); // max 10
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = document.createElement("img");
+      img.src = ev.target.result;
+      img.className = "fp-preview-thumb";
+      wrap.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+// Upload handler
+document.getElementById("btnFpUpload").addEventListener("click", async () => {
+  const date = document.getElementById("fpDate").value;
+  const district = document.getElementById("fpDistrict").value;
+  const mauza = document.getElementById("fpMauza").value.trim();
+  const caption = document.getElementById("fpCaption").value.trim();
+  const files = document.getElementById("fpFiles").files;
+  const msg = document.getElementById("fpMsg");
+  const btn = document.getElementById("btnFpUpload");
+
+  if (!date) { showMsg("fpMsg", "Select a report date.", false); return; }
+  if (!mauza) { showMsg("fpMsg", "Enter the mauza / location.", false); return; }
+  if (files.length === 0) { showMsg("fpMsg", "Select at least one image.", false); return; }
+
+  btn.disabled = true;
+  btn.textContent = "Uploading…";
+  msg.className = "msg";
+
+  try {
+    const uploaded = [];
+    for (let i = 0; i < files.length; i++) {
+      const result = await uploadToCloudinary(files[i]);
+      uploaded.push(result);
+    }
+
+    const entry = {
+      date,
+      district,
+      mauza,
+      caption: caption || null,
+      images: uploaded,
+      uploadedBy: currentUid,
+      uploadedAt: new Date().toISOString()
+    };
+
+    await db.ref("fieldProof/" + district + "/" + Date.now()).set(entry);
+
+    showMsg("fpMsg", `Uploaded ${uploaded.length} image(s) for ${district} — ${mauza}.`, true);
+    document.getElementById("fpMauza").value = "";
+    document.getElementById("fpCaption").value = "";
+    document.getElementById("fpFiles").value = "";
+    document.getElementById("fpPreviewWrap").innerHTML = "";
+  } catch (err) {
+    showMsg("fpMsg", "Upload failed: " + err.message, false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Upload Field Proof";
+  }
+});
+
+// Gallery renderer
+function renderFpGallery() {
+  const filterDistrict = currentRole === "manager" ? currentDistrict : document.getElementById("fpFilterDistrict").value;
+  const fromDate = document.getElementById("fpFilterFrom").value;
+  const toDate = document.getElementById("fpFilterTo").value;
+  const wrap = document.getElementById("fpGallery");
+
+  db.ref("fieldProof").once("value").then(snap => {
+    const allData = snap.val() || {};
+    let entries = [];
+
+    Object.entries(allData).forEach(([district, districtEntries]) => {
+      if (filterDistrict && district !== filterDistrict) return;
+      Object.entries(districtEntries || {}).forEach(([key, entry]) => {
+        entries.push({ key, ...entry });
+      });
+    });
+
+    // Filter by date range
+    if (fromDate) entries = entries.filter(e => e.date >= fromDate);
+    if (toDate) entries = entries.filter(e => e.date <= toDate);
+
+    // Sort by date desc, then upload time desc
+    entries.sort((a, b) => {
+      if (a.date !== b.date) return b.date.localeCompare(a.date);
+      return (b.uploadedAt || "").localeCompare(a.uploadedAt || "");
+    });
+
+    if (entries.length === 0) {
+      wrap.innerHTML = '<div class="empty">No field proof entries yet.</div>';
+      return;
+    }
+
+    wrap.innerHTML = "";
+    entries.forEach(entry => {
+      const card = document.createElement("div");
+      card.className = "fp-card";
+
+      const isOwner = entry.uploadedBy === currentUid;
+      const today = new Date().toISOString().slice(0,10);
+      const canDelete = isOwner && entry.date === today;
+
+      const imgHtml = (entry.images || []).map((img, idx) => 
+        `<img src="${img.url}" data-full="${img.url}" data-idx="${idx}" onclick="openFpLightbox('${img.url}')">`
+      ).join("");
+
+      card.innerHTML = `
+        <div class="header">
+          <div class="meta">
+            <b>${districtName(entry.district)}</b> · ${entry.date}<br>
+            📍 ${entry.mauza}${entry.caption ? '<br>📝 ' + entry.caption : ''}
+          </div>
+          ${canDelete ? `<button class="fp-delete-btn" data-key="${entry.key}" data-district="${entry.district}">Delete</button>` : ""}
+        </div>
+        <div class="images">${imgHtml}</div>
+      `;
+      wrap.appendChild(card);
+    });
+
+    // Attach delete handlers
+    wrap.querySelectorAll(".fp-delete-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (!confirm("Delete this field proof entry? This cannot be undone.")) return;
+        db.ref("fieldProof/" + btn.dataset.district + "/" + btn.dataset.key).remove()
+          .catch(e => alert("Error: " + e.message));
+      });
+    });
+  });
+}
+
+// Lightbox
+window.openFpLightbox = function(url) {
+  const box = document.createElement("div");
+  box.className = "fp-lightbox";
+  box.innerHTML = `<button class="close">&times;</button><img src="${url}">`;
+  document.body.appendChild(box);
+  box.querySelector(".close").addEventListener("click", () => box.remove());
+  box.addEventListener("click", (e) => { if (e.target === box) box.remove(); });
+};
+
+document.getElementById("fpFilterDistrict").addEventListener("change", renderFpGallery);
+document.getElementById("fpFilterFrom").addEventListener("change", renderFpGallery);
+document.getElementById("fpFilterTo").addEventListener("change", renderFpGallery);
+
 
 } // end initApp
 </script>
