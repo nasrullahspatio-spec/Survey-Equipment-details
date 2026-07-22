@@ -1009,17 +1009,33 @@ const auth = firebase.auth();
 const CLOUDINARY_CLOUD_NAME = "uacj2hak";
 const CLOUDINARY_UPLOAD_PRESET = "Field-proof";
 
-async function uploadToCloudinary(file) {
+function safePathPart(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "unknown";
+}
+
+async function uploadToCloudinary(file, district, date) {
   const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
   const formData = new FormData();
+  const folder = `spatio-field-proof/${safePathPart(district)}/${safePathPart(date)}`;
+  const baseName = file.name.replace(/\.[^.]+$/, "");
+
   formData.append("file", file);
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-  formData.append("folder", "spatio-field-proof");
+  formData.append("folder", folder);
+  formData.append("public_id", `${Date.now()}-${safePathPart(baseName)}`);
 
   const res = await fetch(url, { method: "POST", body: formData });
-  if (!res.ok) throw new Error("Upload failed: " + res.statusText);
-  const data = await res.json();
-  return { url: data.secure_url, publicId: data.public_id };
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) {
+    throw new Error((data && data.error && data.error.message) ? data.error.message : `Cloudinary upload failed (${res.status})`);
+  }
+  if (!data.secure_url) {
+    throw new Error("Cloudinary upload succeeded but no image URL was returned.");
+  }
+  return { url: data.secure_url, publicId: data.public_id, folder: data.folder || folder };
 }
 
 
@@ -2523,7 +2539,7 @@ document.getElementById("btnFpUpload").addEventListener("click", async () => {
   try {
     const uploaded = [];
     for (let i = 0; i < files.length; i++) {
-      const result = await uploadToCloudinary(files[i]);
+      const result = await uploadToCloudinary(files[i], district, date);
       uploaded.push(result);
     }
 
@@ -2537,7 +2553,12 @@ document.getElementById("btnFpUpload").addEventListener("click", async () => {
       uploadedAt: new Date().toISOString()
     };
 
-    await db.ref("fieldProof/" + district + "/" + Date.now()).set(entry);
+    try {
+      await db.ref("fieldProof/" + district + "/" + Date.now()).set(entry);
+    } catch (dbErr) {
+      showMsg("fpMsg", `Images uploaded to Cloudinary, but saving the record failed: ${dbErr.message}`, false);
+      return;
+    }
 
     showMsg("fpMsg", `Uploaded ${uploaded.length} image(s) for ${district} — ${mauza}.`, true);
     document.getElementById("fpMauza").value = "";
@@ -2559,16 +2580,26 @@ function renderFpGallery() {
   const toDate = document.getElementById("fpFilterTo").value;
   const wrap = document.getElementById("fpGallery");
 
-  db.ref("fieldProof").once("value").then(snap => {
-    const allData = snap.val() || {};
+  wrap.innerHTML = '<div class="empty">Loading…</div>';
+
+  const sourceRef = filterDistrict ? db.ref("fieldProof/" + filterDistrict) : db.ref("fieldProof");
+
+  sourceRef.once("value").then(snap => {
     let entries = [];
 
-    Object.entries(allData).forEach(([district, districtEntries]) => {
-      if (filterDistrict && district !== filterDistrict) return;
-      Object.entries(districtEntries || {}).forEach(([key, entry]) => {
-        entries.push({ key, ...entry });
+    const allData = snap.val() || {};
+
+    if (filterDistrict) {
+      Object.entries(allData).forEach(([key, entry]) => {
+        entries.push({ key, district: filterDistrict, ...entry });
       });
-    });
+    } else {
+      Object.entries(allData).forEach(([district, districtEntries]) => {
+        Object.entries(districtEntries || {}).forEach(([key, entry]) => {
+          entries.push({ key, ...entry });
+        });
+      });
+    }
 
     // Filter by date range
     if (fromDate) entries = entries.filter(e => e.date >= fromDate);
@@ -2619,6 +2650,8 @@ function renderFpGallery() {
           .catch(e => alert("Error: " + e.message));
       });
     });
+  }).catch(err => {
+    wrap.innerHTML = `<div class="empty">Failed to load field proof: ${String(err.message || err)}</div>`;
   });
 }
 
