@@ -10,7 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <style>
   :root{
@@ -2587,7 +2587,7 @@ document.getElementById("fpFilterTo").addEventListener("change", renderFpGallery
 // ---------- DISTRICT RECEIPT GENERATOR (admin only) ----------
 if (currentRole === "admin"){
   document.getElementById("btnGenerateReceipt").addEventListener("click", async () => {
-    if (!window.docx && typeof docx === "undefined") {
+    if (typeof docx === "undefined") {
       showMsg("receiptMsg", "DOCX library is still loading. Please wait a moment and try again.", false);
       return;
     }
@@ -2626,9 +2626,7 @@ if (currentRole === "admin"){
       const dateStr = now.toLocaleDateString("en-GB");
       const refNum = `REC-${district}-${now.toISOString().slice(0,10).replace(/-/g,"")}-${String(now.getHours()).padStart(2,"0")}${String(now.getMinutes()).padStart(2,"0")}`;
 
-      const docxLib = window.docx || docx;
-      if (!docxLib) { throw new Error("DOCX library failed to load. Please refresh the page."); }
-      const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, AlignmentType, BorderStyle, HeadingLevel, TextRun } = docxLib;
+      const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, AlignmentType, BorderStyle, HeadingLevel, TextRun } = docx;
 
       // Build item table rows
       const itemRows = [
