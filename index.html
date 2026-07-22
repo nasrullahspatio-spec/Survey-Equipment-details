@@ -2817,7 +2817,7 @@ if (currentRole === "admin"){
       });
 
       // Recalculate total items count (serialized = 1 each, grouped = count each, kits = 1 each)
-      const totalItems = serializedItems.length + Object.values(typeGroups).reduce((sum, g) => sum + g.count, 0) + kitList.length;
+      const totalInventoryCount = serializedItems.length + Object.values(typeGroups).reduce((sum, g) => sum + g.count, 0) + kitList.length;
       const doc = new Document({
         sections: [{
           properties: {},
@@ -2891,7 +2891,7 @@ if (currentRole === "admin"){
 
             // Items table
             new Paragraph({
-              text: `EQUIPMENT INVENTORY (${totalItems} items — ${totalWords})`,
+              text: `EQUIPMENT INVENTORY (${totalInventoryCount} items — ${totalWords})`,
               heading: HeadingLevel.HEADING_3,
               spacing: { before: 200, after: 100 },
               bold: true
@@ -2910,7 +2910,7 @@ if (currentRole === "admin"){
             }),
 
             new Paragraph({
-              text: `Total items received: ${totalItems} (${totalWords} only)`,
+              text: `Total items received: ${totalInventoryCount} (${totalWords} only)`,
               spacing: { before: 200, after: 200 },
               bold: true
             }),
