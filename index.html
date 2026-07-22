@@ -169,6 +169,7 @@
   @keyframes dotBounce{0%,100%{opacity:0.4;transform:translateY(0);}50%{opacity:1;transform:translateY(-6px);}}
 </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
@@ -908,9 +909,24 @@ function kitPath(kitId){
 
 
 if (currentRole === "manager"){
-  ["newDistrict","itemDistrictFilter","newSurveyorDistrict","autoUserDistrict","newUserDistrict"].forEach(id=>{
+  // Lock all district dropdowns to manager's district — filter options so only their district shows
+  const districtSelectIds = [
+    "newDistrict", "itemDistrictFilter", "kitDistrict", "kitDistrictFilter",
+    "newSurveyorDistrict", "surveyorDistrictFilter", "autoUserDistrict",
+    "newUserDistrict", "histDistrictFilter"
+  ];
+  districtSelectIds.forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.value = currentDistrict; el.disabled = true; }
+    if (!el) return;
+    // Remove all options except the manager's district
+    const opts = [...el.options];
+    opts.forEach(opt => {
+      if (opt.value !== "" && opt.value !== currentDistrict) {
+        el.removeChild(opt);
+      }
+    });
+    el.value = currentDistrict;
+    el.disabled = true;
   });
 }
 
