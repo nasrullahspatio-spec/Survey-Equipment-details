@@ -2713,7 +2713,7 @@ if (currentRole === "admin"){
         if (n < 1000) return ones[Math.floor(n/100)] + " Hundred" + (n%100 ? " and " + numberToWords(n%100) : "");
         return String(n);
       }
-      // totalItems already calculated above with grouping logic
+      const totalItems = itemList.length + kitList.length;
       const totalWords = numberToWords(totalItems);
 
       const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, AlignmentType, BorderStyle, HeadingLevel, TextRun, UnderlineType } = docxLib;
@@ -2736,8 +2736,6 @@ if (currentRole === "admin"){
 
       // Types that should be GROUPED by type (no unique serial numbers)
       const GROUPABLE_TYPES = ["ROD", "BOX-DGPS", "BAG-DGPS", "BAG-ROD", "CHARGER", "BATTERY", "OTHER"];
-      // Types with serial numbers (listed individually)
-      const SERIALIZED_TYPES = ["DGPS"];
 
       // Group groupable items by type
       const typeGroups = {};
@@ -2782,8 +2780,8 @@ if (currentRole === "admin"){
 
       // Add grouped items (Roads, Bags, Chargers, etc.) — grouped by type with qty
       Object.values(typeGroups).forEach(group => {
-        const desc = group.description 
-          ? `${group.type} — ${group.description}` 
+        const desc = group.description
+          ? `${group.type} — ${group.description}`
           : (group.manufacturer ? `${group.type} (${group.manufacturer})` : group.type);
         const allIds = group.ids.join(", ");
         const statusStr = Array.from(group.statuses).join(" / ");
@@ -2819,8 +2817,7 @@ if (currentRole === "admin"){
       });
 
       // Recalculate total items count (serialized = 1 each, grouped = count each, kits = 1 each)
-      const totalItems = serializedItems.length + Object.values(typeGroups).reduce((sum, g) => sum + g.count, 0) + kitList.length;      });
-
+      const totalItems = serializedItems.length + Object.values(typeGroups).reduce((sum, g) => sum + g.count, 0) + kitList.length;
       const doc = new Document({
         sections: [{
           properties: {},
