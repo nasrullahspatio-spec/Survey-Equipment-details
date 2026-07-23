@@ -911,7 +911,6 @@
     </div>
   </section>
 
-
   <!-- FIELD PROOF -->
   <section id="tab-fieldproof">
     <div class="card">
@@ -1093,7 +1092,6 @@ async function uploadToCloudinary(file, district, date) {
   return { url: data.secure_url, publicId: data.public_id, folder: data.folder || folder };
 }
 
-
 // ---------- AUTH GATE ----------
 let appInitialized = false;
 let currentUid = null;
@@ -1242,7 +1240,6 @@ function kitPath(kitId){
   const district = kitId.split("-")[0];
   return "kits/" + district + "/" + kitId;
 }
-
 
 if (currentRole === "manager"){
   // Lock all district dropdowns to manager's district — filter options so only their district shows
@@ -2210,7 +2207,6 @@ if (currentRole === "admin"){
   });
 }
 
-
 // ---------- KITS ----------
 let kitsCache = {};
 let kitDraftItems = [];
@@ -2520,7 +2516,6 @@ document.getElementById("inKitSelect").addEventListener("change", (e)=>{
     conditionsWrap.appendChild(div);
   });
 });
-
 
 // ---------- FIELD PROOF ----------
 const fpRefPath = currentRole === "admin" ? "fieldProof" : "fieldProof/" + currentDistrict;
@@ -2840,17 +2835,24 @@ if (currentRole === "admin"){
       const totalItems = itemList.length + kitList.length;
       const totalWords = numberToWords(totalItems);
 
-      const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, AlignmentType, BorderStyle, HeadingLevel, TextRun, UnderlineType } = docxLib;
+      const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, AlignmentType, BorderStyle, HeadingLevel, TextRun, UnderlineType, TableLayoutType } = docxLib;
+
+      // Fixed DXA column widths (mobile Word/Docs ignore % widths on data rows)
+      const TABLE_COL_WIDTHS = [680, 3400, 1870, 850, 1700];
+      const makeTableCell = (text, colIdx, bold = false) => new TableCell({
+        width: { size: TABLE_COL_WIDTHS[colIdx], type: WidthType.DXA },
+        children: [new Paragraph({ text: String(text), bold })],
+      });
 
       // Build combined items + kits table rows
       const tableRows = [
         new TableRow({
           children: [
-            new TableCell({ children: [new Paragraph({ text: "S.No", bold: true })], width: { size: 8, type: WidthType.PERCENT } }),
-            new TableCell({ children: [new Paragraph({ text: "Item Description", bold: true })], width: { size: 40, type: WidthType.PERCENT } }),
-            new TableCell({ children: [new Paragraph({ text: "Serial / Model No.", bold: true })], width: { size: 22, type: WidthType.PERCENT } }),
-            new TableCell({ children: [new Paragraph({ text: "Quantity", bold: true })], width: { size: 10, type: WidthType.PERCENT } }),
-            new TableCell({ children: [new Paragraph({ text: "Remarks", bold: true })], width: { size: 20, type: WidthType.PERCENT } }),
+            makeTableCell("S.No", 0, true),
+            makeTableCell("Item Description", 1, true),
+            makeTableCell("Serial / Model No.", 2, true),
+            makeTableCell("Quantity", 3, true),
+            makeTableCell("Remarks", 4, true),
           ]
         })
       ];
@@ -2894,11 +2896,11 @@ if (currentRole === "admin"){
           : `${it.id} (${it.type})`;
         tableRows.push(new TableRow({
           children: [
-            new TableCell({ children: [new Paragraph(String(sno++))] }),
-            new TableCell({ children: [new Paragraph(itemLabel)] }),
-            new TableCell({ children: [new Paragraph(it.serial || "N/A")] }),
-            new TableCell({ children: [new Paragraph("1")] }),
-            new TableCell({ children: [new Paragraph("")] }),
+            makeTableCell(sno++, 0),
+            makeTableCell(itemLabel, 1),
+            makeTableCell(it.serial || "N/A", 2),
+            makeTableCell("1", 3),
+            makeTableCell("", 4),
           ]
         }));
       });
@@ -2912,11 +2914,11 @@ if (currentRole === "admin"){
 
         tableRows.push(new TableRow({
           children: [
-            new TableCell({ children: [new Paragraph(String(sno++))] }),
-            new TableCell({ children: [new Paragraph(desc)] }),
-            new TableCell({ children: [new Paragraph(allIds)] }),
-            new TableCell({ children: [new Paragraph(String(group.count))] }),
-            new TableCell({ children: [new Paragraph("")] }),
+            makeTableCell(sno++, 0),
+            makeTableCell(desc, 1),
+            makeTableCell(allIds, 2),
+            makeTableCell(group.count, 3),
+            makeTableCell("", 4),
           ]
         }));
       });
@@ -2928,11 +2930,11 @@ if (currentRole === "admin"){
         }).join(", ");
         tableRows.push(new TableRow({
           children: [
-            new TableCell({ children: [new Paragraph(String(sno++))] }),
-            new TableCell({ children: [new Paragraph(`${k.id} — Kit containing: ${itemsInside}`)] }),
-            new TableCell({ children: [new Paragraph("N/A")] }),
-            new TableCell({ children: [new Paragraph("1")] }),
-            new TableCell({ children: [new Paragraph("")] }),
+            makeTableCell(sno++, 0),
+            makeTableCell(`${k.id} — Kit containing: ${itemsInside}`, 1),
+            makeTableCell("N/A", 2),
+            makeTableCell("1", 3),
+            makeTableCell("", 4),
           ]
         }));
       });
@@ -3052,6 +3054,8 @@ if (currentRole === "admin"){
             new Table({
               rows: tableRows,
               width: { size: 100, type: WidthType.PERCENT },
+              columnWidths: TABLE_COL_WIDTHS,
+              layout: TableLayoutType.FIXED,
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 1 },
                 bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -3132,3 +3136,4 @@ if (currentRole === "admin"){
 </script>
 </body>
 </html>
+
