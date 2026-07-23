@@ -1097,6 +1097,7 @@ let appInitialized = false;
 let currentUid = null;
 let currentRole = null; // "admin" or "manager"
 let currentDistrict = null; // e.g. "LHR", null for admin
+let logoutInProgress = false;
 
 function showScreen(name){
   // name: "login" | "loading" | "app" | "noaccess"
@@ -1143,6 +1144,12 @@ auth.onAuthStateChanged(user => {
       showScreen("login");
     });
   } else {
+    currentUid = null;
+    currentRole = null;
+    currentDistrict = null;
+    if (!logoutInProgress) appInitialized = false;
+    document.getElementById("roleTag").textContent = "";
+    document.getElementById("navUsers").style.display = "none";
     showScreen("login");
   }
 });
@@ -1172,7 +1179,10 @@ document.getElementById("btnLogin").addEventListener("click", ()=>{
 });
 
 document.getElementById("btnLogout").addEventListener("click", ()=>{
-  auth.signOut();
+  logoutInProgress = true;
+  auth.signOut().finally(() => {
+    window.location.reload();
+  });
 });
 
 function initApp(){
@@ -1415,6 +1425,8 @@ db.ref(itemsRefPath).on("value", snap=>{
   renderOutList();
   renderHistItemFilter();
   renderQrPrintSelect();
+  renderKitItemSelect();
+  renderKitSelects();
 });
 
 let editingId = null;
@@ -1799,25 +1811,18 @@ document.getElementById("btnCheckout").addEventListener("click", ()=>{
   const affidavit = document.getElementById("outAffidavit").value.trim();
 
   if (!surveyor){ showMsg("outMsg","Enter the surveyor's name.", false); return; }
-  if (custodyType === "extended" && !returnDate){
-    showMsg("outMsg","Extended custody requires an expected return date.", false); return;
-  }
-  if (custodyType === "extended" && !affidavit){
-    showMsg("outMsg","Extended custody requires an affidavit reference on file.", false); return;
-  }
-
   if (isKitMode){
     const kitId = document.getElementById("outKitSelect").value;
     if (!kitId){ showMsg("outMsg","Select a kit first.", false); return; }
     const kit = kitsCache[kitId];
     const txRef = db.ref("transactions").push();
     const updates = {};
-    updates["transactions/"+district+"/"+txRef.key] = {
+    updates["transactions/"+kit.district+"/"+txRef.key] = {
       kitId, surveyor,
       district: kit.district,
       custodyType,
-      expectedReturn: custodyType === "extended" ? returnDate : null,
-      affidavit: custodyType === "extended" ? affidavit : null,
+      expectedReturn: returnDate || null,
+      affidavit: affidavit || null,
       checkOutTime: new Date().toISOString(),
       checkInTime: null,
       condition: null,
@@ -1829,15 +1834,15 @@ document.getElementById("btnCheckout").addEventListener("click", ()=>{
       updates["items/"+itemId.split("-")[0]+"/"+itemId+"/status"] = "With surveyor";
       updates["items/"+itemId.split("-")[0]+"/"+itemId+"/currentSurveyor"] = surveyor;
       updates["items/"+itemId.split("-")[0]+"/"+itemId+"/custodyType"] = custodyType;
-      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/expectedReturn"] = custodyType === "extended" ? returnDate : null;
-      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/affidavit"] = custodyType === "extended" ? affidavit : null;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/expectedReturn"] = returnDate || null;
+      updates["items/"+itemId.split("-")[0]+"/"+itemId+"/affidavit"] = affidavit || null;
       updates["items/"+itemId.split("-")[0]+"/"+itemId+"/openTxId"] = txRef.key;
     });
     updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/status"] = "With surveyor";
     updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/currentSurveyor"] = surveyor;
     updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/custodyType"] = custodyType;
-    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/expectedReturn"] = custodyType === "extended" ? returnDate : null;
-    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/affidavit"] = custodyType === "extended" ? affidavit : null;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/expectedReturn"] = returnDate || null;
+    updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/affidavit"] = affidavit || null;
     updates["kits/"+kitId.split("-")[0]+"/"+kitId+"/openTxId"] = txRef.key;
     db.ref().update(updates).then(()=>{
       showMsg("outMsg", `${kitId} checked out to ${surveyor} (${custodyType === "extended" ? "extended custody" : "daily"}).`, true);
@@ -1858,8 +1863,8 @@ document.getElementById("btnCheckout").addEventListener("click", ()=>{
       itemId, surveyor,
       district: itemsCache[itemId].district,
       custodyType,
-      expectedReturn: custodyType === "extended" ? returnDate : null,
-      affidavit: custodyType === "extended" ? affidavit : null,
+      expectedReturn: returnDate || null,
+      affidavit: affidavit || null,
       checkOutTime: new Date().toISOString(),
       checkInTime: null,
       condition: null,
@@ -1870,8 +1875,8 @@ document.getElementById("btnCheckout").addEventListener("click", ()=>{
         status: "With surveyor",
         currentSurveyor: surveyor,
         custodyType,
-        expectedReturn: custodyType === "extended" ? returnDate : null,
-        affidavit: custodyType === "extended" ? affidavit : null,
+        expectedReturn: returnDate || null,
+        affidavit: affidavit || null,
         openTxId: txRef.key
       });
     }).then(()=>{
@@ -2216,6 +2221,7 @@ db.ref(kitsRefPath).on("value", snap=>{
   kitsCache = normalizeKits(snap.val()) || {};
   renderKitList();
   renderKitSelects();
+  renderOutList();
 });
 
 function renderKitItemSelect(){
@@ -2303,8 +2309,17 @@ document.getElementById("btnCreateKit").addEventListener("click", ()=>{
   itemIds.forEach(id => { updates["items/"+id.split("-")[0]+"/"+id+"/inKit"] = kitId; });
   db.ref().update(updates).then(()=>{
     showMsg("kitMsg", `Created ${kitId} with ${itemIds.length} items.`, true);
+    kitsCache[kitId] = kitData;
+    itemIds.forEach(id => {
+      if (itemsCache[id]) itemsCache[id].inKit = kitId;
+    });
     kitDraftItems = [];
     renderKitDraft();
+    renderKitItemSelect();
+    renderKitList();
+    renderKitSelects();
+    renderOutSelect();
+    renderOutList();
     document.getElementById("kitNumber").value = "";
   }).catch(e=>showMsg("kitMsg","Error: "+e.message, false));
 });
@@ -2518,8 +2533,10 @@ document.getElementById("inKitSelect").addEventListener("change", (e)=>{
 });
 
 // ---------- FIELD PROOF ----------
+let fieldProofCache = {};
 const fpRefPath = currentRole === "admin" ? "fieldProof" : "fieldProof/" + currentDistrict;
 db.ref(fpRefPath).on("value", snap => {
+  fieldProofCache = snap.val() || {};
   renderFpGallery();
 });
 
@@ -2631,6 +2648,79 @@ function renderFpGallery() {
   const toDate = document.getElementById("fpFilterTo").value;
   const wrap = document.getElementById("fpGallery");
 
+  let entries = [];
+  const allData = fieldProofCache || {};
+
+  if (currentRole === "manager") {
+    Object.entries(allData).forEach(([key, entry]) => {
+      entries.push({ key, district: currentDistrict, ...entry });
+    });
+  } else if (filterDistrict) {
+    Object.entries(allData[filterDistrict] || {}).forEach(([key, entry]) => {
+      entries.push({ key, district: filterDistrict, ...entry });
+    });
+  } else {
+    Object.entries(allData).forEach(([district, districtEntries]) => {
+      Object.entries(districtEntries || {}).forEach(([key, entry]) => {
+        entries.push({ key, ...entry });
+      });
+    });
+  }
+
+  if (fromDate) entries = entries.filter(e => e.date >= fromDate);
+  if (toDate) entries = entries.filter(e => e.date <= toDate);
+
+  entries.sort((a, b) => {
+    if (a.date !== b.date) return b.date.localeCompare(a.date);
+    return (b.uploadedAt || "").localeCompare(a.uploadedAt || "");
+  });
+
+  if (entries.length === 0) {
+    wrap.innerHTML = '<div class="empty">No field proof entries yet.</div>';
+    return;
+  }
+
+  wrap.innerHTML = "";
+  entries.forEach(entry => {
+    const card = document.createElement("div");
+    card.className = "fp-card";
+    const canDelete = currentRole === "admin" || entry.district === currentDistrict;
+    const imgHtml = (entry.images || []).map((img, idx) =>
+      `<img src="${img.url}" data-full="${img.url}" data-idx="${idx}" onclick="openFpLightbox('${img.url}')" onerror="handleFpImageError(this)">`
+    ).join("");
+
+    card.innerHTML = `
+      <div class="header">
+        <div class="meta">
+          <b>${districtName(entry.district)}</b> Â· ${entry.date}<br>
+          ðŸ“ ${entry.mauza}${entry.caption ? '<br>ðŸ“ ' + entry.caption : ''}
+        </div>
+        ${canDelete ? `<button class="fp-delete-btn" data-key="${entry.key}" data-district="${entry.district}">Remove</button>` : ""}
+      </div>
+      <div class="images">${imgHtml}</div>
+    `;
+    card.innerHTML = `
+      <div class="header">
+        <div class="meta">
+          <b>${districtName(entry.district)}</b> - ${entry.date}<br>
+          Location: ${entry.mauza}${entry.caption ? '<br>Notes: ' + entry.caption : ''}
+        </div>
+        ${canDelete ? `<button class="fp-delete-btn" data-key="${entry.key}" data-district="${entry.district}">Remove</button>` : ""}
+      </div>
+      <div class="images">${imgHtml}</div>
+    `;
+    wrap.appendChild(card);
+  });
+
+  wrap.querySelectorAll(".fp-delete-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (!confirm("Remove this field proof from the gallery? This removes the Firebase gallery record only.")) return;
+      db.ref("fieldProof/" + btn.dataset.district + "/" + btn.dataset.key).remove()
+        .catch(e => alert("Error: " + e.message));
+    });
+  });
+  return;
+
   wrap.innerHTML = '<div class="empty">Loading…</div>';
 
   const sourceRef = filterDistrict ? db.ref("fieldProof/" + filterDistrict) : db.ref("fieldProof");
@@ -2711,6 +2801,15 @@ function renderFpGallery() {
 }
 
 // Lightbox
+window.handleFpImageError = function(img) {
+  const note = document.createElement("div");
+  note.className = "empty";
+  note.style.padding = "10px";
+  note.style.fontSize = "12px";
+  note.textContent = "Image missing in Cloudinary. Remove this gallery record if it is no longer needed.";
+  img.replaceWith(note);
+};
+
 window.openFpLightbox = function(url) {
   const box = document.createElement("div");
   box.className = "fp-lightbox";
@@ -3136,4 +3235,3 @@ if (currentRole === "admin"){
 </script>
 </body>
 </html>
-
