@@ -22,6 +22,7 @@
     --muted:#9fb0ac;
     --accent:#ffb400;
     --accent-dim:#7a5c00;
+    --accent-text:#231a00;
     --good:#5fbf77;
     --bad:#e2584d;
     --warn:#e2a53d;
@@ -50,7 +51,7 @@
     flex:0 0 auto; padding:9px 14px; border-radius:999px; border:1px solid var(--line);
     background:var(--panel); color:var(--muted); font-size:13px; font-weight:600; cursor:pointer;
   }
-  nav button.active{ background:var(--accent); color:#231a00; border-color:var(--accent);}
+  nav button.active{ background:var(--accent); color:var(--accent-text); border-color:var(--accent);}
   main{padding:16px; max-width:720px; margin:0 auto;}
   section{display:none;}
   section.active{display:block;}
@@ -278,6 +279,34 @@
   #btnLogout:hover{ border-color:var(--accent); color:var(--accent); transition:all 0.2s ease; }
   .fp-delete-btn:hover{ background:var(--bad); color:#fff; transform:scale(1.05); transition:all 0.15s ease; }
 
+
+  /* Theme and navigation polish */
+  body.theme-light{
+    --bg:#f5f7f8; --panel:#ffffff; --panel-2:#edf2f4; --line:#cfd8dc;
+    --text:#172023; --muted:#54666d; --accent:#0f766e; --accent-dim:#8fc8c1;
+    --accent-text:#ffffff; --good:#16803a; --bad:#c9362c; --warn:#b26a00;
+  }
+  body.theme-ocean{
+    --bg:#0d171d; --panel:#14252e; --panel-2:#1d3440; --line:#2c4d5a;
+    --text:#edf7fa; --muted:#a6bac2; --accent:#38bdf8; --accent-dim:#0f4c68; --accent-text:#06151c;
+  }
+  body.theme-forest{
+    --bg:#101812; --panel:#18241b; --panel-2:#223128; --line:#34483a;
+    --text:#eef5ef; --muted:#a6b6a9; --accent:#7ccf72; --accent-dim:#3f713a; --accent-text:#0d1b0f;
+  }
+  body.theme-contrast{
+    --bg:#080808; --panel:#151515; --panel-2:#232323; --line:#4b5563;
+    --text:#ffffff; --muted:#d1d5db; --accent:#facc15; --accent-dim:#856b00; --accent-text:#111111;
+  }
+  nav{gap:4px; justify-content:center;}
+  nav button{border-radius:8px; border-color:transparent; background:transparent; font-weight:650;}
+  nav button.active{color:var(--accent-text,#231a00); box-shadow:0 2px 10px rgba(0,0,0,0.18);}
+  button.primary{color:var(--accent-text,#231a00);}
+  .theme-select{width:auto; min-width:132px; padding:6px 28px 6px 10px; border-radius:8px; font-size:12px; background:var(--panel); color:var(--muted); border:1px solid var(--line);}
+  .kit-edit-panel{border-top:1px solid var(--line); margin-top:8px; padding-top:10px;}
+  .kit-edit-item{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--panel); margin-bottom:6px;}
+  .kit-action-row{display:flex; gap:8px; margin-top:8px;}
+  @media (min-width:900px){ main{max-width:860px;} }
 </style>
 <base target="_blank">
 <base target="_blank">
@@ -390,7 +419,8 @@
 <header>
   <h1>Spatio Equipment Tracker</h1>
   <div style="font-size:11px; color:var(--muted);" id="roleTag"></div>
-  <div style="display:flex; align-items:center; gap:12px;">
+  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end;">
+    <select id="themeSelect" class="theme-select" title="Theme"><option value="dark">Dark Amber</option><option value="light">Light Teal</option><option value="ocean">Ocean Blue</option><option value="forest">Field Green</option><option value="contrast">High Contrast</option></select>
     <div class="status"><span class="dot" id="connDot"></span><span id="connText">connecting…</span></div>
     <button id="btnLogout" style="background:none; border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer;">Sign out</button>
   </div>
@@ -2212,9 +2242,24 @@ if (currentRole === "admin"){
   });
 }
 
+
+function applyTheme(theme){
+  document.body.classList.remove("theme-light", "theme-ocean", "theme-forest", "theme-contrast");
+  if (theme && theme !== "dark") document.body.classList.add("theme-" + theme);
+  localStorage.setItem("spatioTheme", theme || "dark");
+}
+const savedTheme = localStorage.getItem("spatioTheme") || "dark";
+applyTheme(savedTheme);
+const themeSelect = document.getElementById("themeSelect");
+if (themeSelect){
+  themeSelect.value = savedTheme;
+  themeSelect.addEventListener("change", e => applyTheme(e.target.value));
+}
+
 // ---------- KITS ----------
 let kitsCache = {};
 let kitDraftItems = [];
+let editingKitId = null;
 
 const kitsRefPath = currentRole === "admin" ? "kits" : "kits/" + currentDistrict;
 db.ref(kitsRefPath).on("value", snap=>{
@@ -2345,21 +2390,75 @@ function renderKitList(){
     row.style.alignItems = "stretch";
     row.style.gap = "6px";
     const badgeClass = k.status === "With surveyor" ? "out" : (k.status === "Partial return" ? "repair" : "office");
-    const withWho = k.currentSurveyor ? ` · with ${k.currentSurveyor}` : "";
+    const withWho = k.currentSurveyor ? ` - with ${k.currentSurveyor}` : "";
     const itemList = (k.items || []).map(iid => {
       const it = itemsCache[iid];
       return it ? `${iid} (${it.type})` : iid;
     }).join(", ");
+    const editPanel = editingKitId === id ? renderKitEditPanel(id) : "";
     row.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
         <div><div class="id">${id}</div><div class="meta">${districtName(k.district)}${withWho}</div></div>
         <span class="badge ${badgeClass}">${k.status || "In office"}</span>
       </div>
       <div class="meta" style="font-size:11px;">Contains: ${itemList || "no items"}</div>
-      <div style="display:flex; gap:8px; margin-top:2px;">
+      <div class="kit-action-row">
+        <button class="secondary" style="margin:0; flex:1;" data-kit-edit="${id}">${editingKitId === id ? "Close editor" : "Edit kit"}</button>
         ${k.status === "In office" ? `<button class="secondary" style="margin:0; flex:1; color:var(--bad); border-color:var(--bad);" data-kit-del="${id}">Delete</button>` : ""}
-      </div>`;
+      </div>
+      ${editPanel}`;
     wrap.appendChild(row);
+  });
+  attachKitListHandlers(wrap);
+}
+
+function renderKitEditPanel(kitId){
+  const k = kitsCache[kitId];
+  const currentItems = (k.items || []).map(itemId => {
+    const it = itemsCache[itemId];
+    return `<div class="kit-edit-item"><span>${itemId}${it ? " (" + it.type + ")" : ""}</span><button class="secondary" style="width:auto; margin:0; padding:6px 10px; color:var(--bad); border-color:var(--bad);" data-kit-remove-item="${itemId}" data-kit-id="${kitId}">Remove</button></div>`;
+  }).join("") || '<div class="empty">No items in this kit.</div>';
+  const availableOptions = Object.keys(itemsCache).sort().filter(itemId => {
+    const it = itemsCache[itemId];
+    if (!it || it.district !== k.district) return false;
+    if (currentRole === "manager" && it.district !== currentDistrict) return false;
+    if (it.inKit) return false;
+    return it.status === "In office";
+  }).map(itemId => {
+    const it = itemsCache[itemId];
+    return `<option value="${itemId}">${itemId} (${it.type}${it.serial ? " SN:" + it.serial : ""})</option>`;
+  }).join("");
+  return `
+    <div class="kit-edit-panel">
+      <div class="meta" style="margin-bottom:8px;">Edit kit contents. Added items inherit the kit's current assignment if it is already checked out to a surveyor.</div>
+      ${currentItems}
+      <div class="row" style="align-items:end; margin-top:8px;">
+        <div style="flex:3;"><label style="margin-top:0;">Add available item</label><select data-kit-add-select="${kitId}"><option value="">-- select item --</option>${availableOptions}</select></div>
+        <button class="secondary" style="flex:1; margin-top:0;" data-kit-add-btn="${kitId}">Add</button>
+      </div>
+    </div>`;
+}
+
+function attachKitListHandlers(wrap){
+  wrap.querySelectorAll("[data-kit-edit]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      editingKitId = editingKitId === btn.dataset.kitEdit ? null : btn.dataset.kitEdit;
+      renderKitList();
+    });
+  });
+  wrap.querySelectorAll("[data-kit-add-btn]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const kitId = btn.dataset.kitAddBtn;
+      const sel = wrap.querySelector(`[data-kit-add-select="${kitId}"]`);
+      const itemId = sel ? sel.value : "";
+      if (!itemId) return;
+      addItemToExistingKit(kitId, itemId);
+    });
+  });
+  wrap.querySelectorAll("[data-kit-remove-item]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      removeItemFromExistingKit(btn.dataset.kitId, btn.dataset.kitRemoveItem);
+    });
   });
   wrap.querySelectorAll("[data-kit-del]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -2372,6 +2471,46 @@ function renderKitList(){
       db.ref().update(updates).catch(e=>alert("Error: "+e.message));
     });
   });
+}
+
+function addItemToExistingKit(kitId, itemId){
+  const k = kitsCache[kitId];
+  const it = itemsCache[itemId];
+  if (!k || !it) return;
+  if (it.inKit){ alert(`${itemId} is already inside another kit.`); return; }
+  if (it.status !== "In office"){ alert(`${itemId} is not available in office.`); return; }
+  const itemIds = [...(k.items || []), itemId];
+  const updates = {};
+  updates["kits/"+k.district+"/"+kitId+"/items"] = itemIds;
+  updates["items/"+it.district+"/"+itemId+"/inKit"] = kitId;
+  if (k.status === "With surveyor"){
+    updates["items/"+it.district+"/"+itemId+"/status"] = "With surveyor";
+    updates["items/"+it.district+"/"+itemId+"/currentSurveyor"] = k.currentSurveyor || null;
+    updates["items/"+it.district+"/"+itemId+"/custodyType"] = k.custodyType || "daily";
+    updates["items/"+it.district+"/"+itemId+"/expectedReturn"] = k.expectedReturn || null;
+    updates["items/"+it.district+"/"+itemId+"/affidavit"] = k.affidavit || null;
+    updates["items/"+it.district+"/"+itemId+"/openTxId"] = k.openTxId || null;
+  }
+  db.ref().update(updates).catch(e=>alert("Error: "+e.message));
+}
+
+function removeItemFromExistingKit(kitId, itemId){
+  const k = kitsCache[kitId];
+  const it = itemsCache[itemId];
+  if (!k || !it) return;
+  const itemIds = (k.items || []).filter(id => id !== itemId);
+  if (itemIds.length === 0){ alert("A kit must keep at least one item. Delete the kit instead if it is no longer needed."); return; }
+  if (!confirm(`Remove ${itemId} from ${kitId}?`)) return;
+  const updates = {};
+  updates["kits/"+k.district+"/"+kitId+"/items"] = itemIds;
+  updates["items/"+it.district+"/"+itemId+"/inKit"] = null;
+  updates["items/"+it.district+"/"+itemId+"/status"] = "In office";
+  updates["items/"+it.district+"/"+itemId+"/currentSurveyor"] = null;
+  updates["items/"+it.district+"/"+itemId+"/custodyType"] = null;
+  updates["items/"+it.district+"/"+itemId+"/expectedReturn"] = null;
+  updates["items/"+it.district+"/"+itemId+"/affidavit"] = null;
+  updates["items/"+it.district+"/"+itemId+"/openTxId"] = null;
+  db.ref().update(updates).catch(e=>alert("Error: "+e.message));
 }
 
 document.getElementById("kitSearch").addEventListener("input", renderKitList);
